@@ -15,9 +15,9 @@ from cocos.director import director
 import pyglet
 from pyglet.gl import *
 
-CELL_WIDTH = 25
-ROW, COL = 20, 28
-DIST = 5
+CELL_WIDTH = 20
+ROW, COL = 40, 70
+DIST = 3
 
 class TestLayer(cocos.layer.Layer):
     
@@ -27,9 +27,11 @@ class TestLayer(cocos.layer.Layer):
         self.schedule( lambda x: 0 )
         self.batch = pyglet.graphics.Batch()
         
+        # list of grid empty squares
         self.squares = [[None for _ in range(ROW)] for _ in range(COL)]
-        self.borders = []
-        self.walls=[(13,4), (15,6), (13,5), (13,6), (14,6), (14,7), (14,8)]
+        # list of borders
+        #self.borders = []
+        self.walls=[(13,14), (15,16), (13,15), (13,16), (14,16), (14,17), (14,18)]
         
         for row in range(ROW):
             for col in range(COL):
@@ -40,37 +42,21 @@ class TestLayer(cocos.layer.Layer):
                             ('c4B', (128, 128, 128, 255) * 4))
         for x,y in self.walls:
             self.squares[x][y].colors = [0, 0, 128, 255] * 4
-        lines=[]
-        for row in range(ROW+1):
-            lines.extend((0., row*CELL_WIDTH, COL*CELL_WIDTH, row*CELL_WIDTH))
-        self.borders.append(self.batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
-                    ('v2f', lines),
-                    ('c4B', (255, 0, 0, 255) * (ROW+1)*2))
-                    )
-        lines=[]
-        for col in range(COL+1):
-            lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, ROW*CELL_WIDTH))
-        self.borders.append(self.batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
-                    ('v2f', lines),
-                    ('c4B', (255, 0, 0, 255) * (COL+1)*2))
-                    )
-        
-        self.dist_mat = lil_matrix((ROW*COL,ROW*COL))
-        def valid_grid(xo, yo):
-            in_grid = not xo<0 and not yo<0 and xo<COL and yo<ROW
-            in_wall = (xo,yo) in self.walls
-            return in_grid and not in_wall
-        for j in range(ROW):
-            for i in range(COL):
-                for x_offset in (-1,0,1):
-                    for y_offset in (-1,0,1):
-                        if valid_grid(i+x_offset, j+y_offset):
-                            if x_offset and y_offset:
-                                self.dist_mat[ i + j*COL, (i+x_offset) + (j+y_offset) * COL] = math.sqrt(2)
-                            elif x_offset or y_offset:
-                                self.dist_mat[i + j*COL, (i+x_offset) + (j+y_offset) * COL] = 1
-        self.dist_mat = self.dist_mat.tocsc()
-        self.dist = shortest_path(self.dist_mat)
+        #lines=[]
+        #for row in range(ROW+1):
+            #lines.extend((0., row*CELL_WIDTH, COL*CELL_WIDTH, row*CELL_WIDTH))
+        #self.borders.append(self.batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
+                    #('v2f', lines),
+                    #('c4B', (255, 0, 0, 255) * (ROW+1)*2))
+                    #)
+        #lines=[]
+        #for col in range(COL+1):
+            #lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, ROW*CELL_WIDTH))
+        #self.borders.append(self.batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
+                    #('v2f', lines),
+                    #('c4B', (255, 0, 0, 255) * (COL+1)*2))
+                    #)
+                    
         self.anchor = (50,50)
         self.position = (50,50)
         
@@ -82,19 +68,57 @@ class TestLayer(cocos.layer.Layer):
         glPopMatrix()
     
     def on_mouse_press(self, x, y, button, modifiers):
-        i,j = (int((x - self.x) // CELL_WIDTH),
+        x, y = director.get_virtual_coordinates(x, y)
+        # square pressed
+        o_x, o_y = (int((x - self.x) // CELL_WIDTH),
             int((y - self.y) // CELL_WIDTH))
-        if i < 0 or j < 0:
+        # check if we are in the grid
+        if o_x < 0 or o_y < 0:
             return
         try:
-            square = self.squares[i][j]
-            origin = i + j * COL
-            
-            reachable_cells = np.argwhere(self.dist[origin] <= DIST).flatten()
-            for cell in reachable_cells:
-                self.squares[cell%COL][cell//COL].colors = [128, 0, 128, 255] * 4
+            square = self.squares[o_x][o_y]
         except IndexError:
-            pass
+            return
+        
+        # we only compute shortest path in a smaller portion of grid.
+        # it's a square of length twice the distance reachable
+        largest_range = DIST*2 + 1
+        # number of the square in the middle of the sub-grid
+        origin = (largest_range // 2) * (largest_range + 1)
+        # calculate the offset to go from sub_grid to the real grid
+        offset_x, offset_y = o_x - largest_range//2, o_y - largest_range//2
+        # create empty distance matrix
+        dist_mat = lil_matrix((largest_range*largest_range, largest_range*largest_range))
+        
+        # check if we are in the grid. Will be called later
+        def valid_grid(xo, yo):
+            # first check if we stay within the sub-grid
+            in_grid = not xo<0 and not yo<0 and xo<largest_range and yo<largest_range
+            # then test if this places us in a valid place on the larger grid
+            xo += offset_x
+            yo += offset_y
+            in_grid = in_grid and not xo<0 and not yo<0 and xo<COL and yo<ROW
+            # check for walls
+            in_wall = (xo,yo) in self.walls
+            return in_grid and not in_wall
+        
+        # for each square in the sub-grid, insert distance in matrix
+        for j in range(largest_range):
+            for i in range(largest_range):
+                for x_offset in (-1,0,1):
+                    for y_offset in (-1,0,1):
+                        if valid_grid(i+x_offset, j+y_offset):
+                            if x_offset and y_offset:
+                                dist_mat[ i + j*largest_range, (i+x_offset) + (j+y_offset) * largest_range] = math.sqrt(2)
+                            elif x_offset or y_offset:
+                                dist_mat[i + j*largest_range, (i+x_offset) + (j+y_offset) * largest_range] = 1
+        dist_mat = dist_mat.tocsr()
+        dist = shortest_path(dist_mat)
+        # all cells from middle of sub-grid (=origin) we can reach with DIST movement
+        reachable_cells = np.argwhere(dist[origin] <= DIST).flatten()
+        for cell in reachable_cells:
+            self.squares[cell%largest_range + offset_x][cell//largest_range + offset_y].colors = [128, 0, 128, 255] * 4
+        
     
     def on_key_press(self, symbol, modifiers):
         for row in range(ROW):
@@ -105,7 +129,7 @@ class TestLayer(cocos.layer.Layer):
                     self.squares[col][row].colors = [0, 0, 128, 255] * 4
 
 def main():
-    director.init(width = 800, height=600)
+    director.init(width = 1600, height=900)
     test_layer = TestLayer ()
     main_scene = cocos.scene.Scene (test_layer)
     director.show_FPS = True
