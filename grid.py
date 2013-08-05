@@ -8,16 +8,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import math
 import numpy as np
 from scipy.sparse import lil_matrix
-from scipy.sparse.csgraph import shortest_path
+from scipy.sparse.csgraph import dijkstra
 
 import cocos
 from cocos.director import director
 import pyglet
 from pyglet.gl import *
 
-CELL_WIDTH = 25
-ROW, COL = 20, 28
-DIST = 5
+CELL_WIDTH = 15
+ROW, COL = 200, 200
+DIST = 15
 
 class TestLayer(cocos.layer.Layer):
     
@@ -70,7 +70,6 @@ class TestLayer(cocos.layer.Layer):
                             elif x_offset or y_offset:
                                 self.dist_mat[i + j*COL, (i+x_offset) + (j+y_offset) * COL] = 1
         self.dist_mat = self.dist_mat.tocsc()
-        self.dist = shortest_path(self.dist_mat)
         self.anchor = (50,50)
         self.position = (50,50)
         
@@ -89,8 +88,8 @@ class TestLayer(cocos.layer.Layer):
         try:
             square = self.squares[i][j]
             origin = i + j * COL
-            
-            reachable_cells = np.argwhere(self.dist[origin] <= DIST).flatten()
+            dist = dijkstra(self.dist_mat, indices=origin)
+            reachable_cells = np.argwhere(dist <= DIST).flatten()
             for cell in reachable_cells:
                 self.squares[cell%COL][cell//COL].colors = [128, 0, 128, 255] * 4
         except IndexError:
@@ -105,7 +104,7 @@ class TestLayer(cocos.layer.Layer):
                     self.squares[col][row].colors = [0, 0, 128, 255] * 4
 
 def main():
-    director.init(width = 800, height=600)
+    director.init(width = 1600, height=900)
     test_layer = TestLayer ()
     main_scene = cocos.scene.Scene (test_layer)
     director.show_FPS = True
