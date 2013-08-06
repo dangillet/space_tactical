@@ -18,7 +18,7 @@ import pyglet
 from pyglet.gl import *
 
 CELL_WIDTH = 50
-ROW, COL = 15, 30
+ROW, COL = 16, 30
 DIST = 5
 
 class GridLayer(cocos.layer.Layer):
@@ -43,25 +43,33 @@ class GridLayer(cocos.layer.Layer):
         # This is a bit slow on start, but won't be part of the game, so who cares?
         shuffle(coords)
         self.walls= coords[:150]
-
+        
+        # Background image
+        img=pyglet.resource.image("outer-space.jpg")
+        # Resize to the grid
+        img.width, img.height = COL*CELL_WIDTH, ROW*CELL_WIDTH
+        self.bg = cocos.sprite.Sprite(img, anchor=(0,0))
+        self.bg.batch=self.batch
+        self.bg.group=pyglet.graphics.OrderedGroup(0)
+        
+        
         # We construct the quads and store them for future reference
         for row in range(ROW):
             for col in range(COL):
-
-                self.squares[col][row] = self.batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(0),
+                self.squares[col][row] = self.batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(1),
                             ('v2f', (col*CELL_WIDTH, row*CELL_WIDTH, col*CELL_WIDTH, (row+1)*CELL_WIDTH,
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
-                            ('c4B', (128, 128, 128, 255) * 4))
+                            ('c4B', (128, 128, 128, 0) * 4))
         # We set a different color for the walls
         for x,y in self.walls:
-            self.squares[x][y].colors = [0, 0, 128, 255] * 4
+            self.squares[x][y].colors = [0, 0, 128, 150] * 4
 
         # We build the lines of the grid.
         lines=[]
         # The horizontal lines first
         for row in range(ROW+1):
             lines.extend((0., row*CELL_WIDTH, COL*CELL_WIDTH, row*CELL_WIDTH))
-        self.borders.append(self.batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
+        self.borders.append(self.batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
                     ('c4B', (255, 0, 0, 100) * (ROW+1)*2))
                     )
@@ -69,7 +77,7 @@ class GridLayer(cocos.layer.Layer):
         lines=[]
         for col in range(COL+1):
             lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, ROW*CELL_WIDTH))
-        self.borders.append(self.batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(1),
+        self.borders.append(self.batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
                     ('c4B', (255, 0, 0, 100) * (COL+1)*2))
                     )
@@ -128,9 +136,9 @@ class GridLayer(cocos.layer.Layer):
         for row in range(ROW):
             for col in range(COL):
                 if (col,row) not in self.walls:
-                    self.squares[col][row].colors = [128, 128, 128, 255] * 4
+                    self.squares[col][row].colors = [128, 128, 128, 0] * 4
                 else:
-                    self.squares[col][row].colors = [0, 0, 128, 255] * 4
+                    self.squares[col][row].colors = [0, 0, 128, 150] * 4
     
     def move_sprite(self, sprite, i, j):
         "Move sprite to the selected grid location"
@@ -226,7 +234,7 @@ class GridLayer(cocos.layer.Layer):
             self.selected.reachable_cells = map(self._from_cell_number_to_coord, reachable_cells)
             self.selected.predecessor = predecessor
             for i, j in self.selected.reachable_cells:
-                self.squares[i][j].colors = [128, 0, 128, 255] * 4
+                self.squares[i][j].colors = [128, 0, 128, 100] * 4
     
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment
