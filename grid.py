@@ -1,5 +1,6 @@
 
 import math
+from itertools import cycle
 from random import shuffle, randint
 import numpy as np
 from scipy.sparse import lil_matrix
@@ -15,8 +16,9 @@ CELL_WIDTH = 50
 ROW, COL = 16, 30
 DIST = 5
 
+
 class GridLayer(cocos.layer.Layer):
-    def __init__(self):
+    def __init__(self, players):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
         # Just for this demo. Remove when we'll have some scheduled methods.
@@ -97,6 +99,12 @@ class GridLayer(cocos.layer.Layer):
         self.anchor = (50,50)
         self.position = (50,50)
         
+        # Player list
+        self.players = cycle(players)
+        for player in players:
+            self.add_player_fleet(player)
+        self.player_turn = next(self.players)
+        self.highlight_player(self.player_turn)
         # Selected object from the grid
         self.selected = None
         
@@ -111,10 +119,10 @@ class GridLayer(cocos.layer.Layer):
         self.batch.draw()
         glPopMatrix()
     
-    def get_cell_from_pixel(self, x, y):
+    def from_pixel_to_grid(self, x, y):
         "Compute the cell coords from pixel coords"
-        i, j = (int((x - self.x) // CELL_WIDTH),
-            int((y - self.y) // CELL_WIDTH))
+        i, j = (int(x // CELL_WIDTH),
+            int(y // CELL_WIDTH))
         # Did we click on the grid?
         if self._is_invalid_grid(i, j):
             return (None, None)
@@ -141,8 +149,7 @@ class GridLayer(cocos.layer.Layer):
             return
         # Reconstruct the path
         dest = self._from_coord_to_cell_number(i,j)
-        sprite_world_pos = self.point_to_world(sprite.position)
-        origin_cell = self.get_cell_from_pixel(*sprite_world_pos)
+        origin_cell = self.from_pixel_to_grid(*(sprite.position))
         origin = self._from_coord_to_cell_number(*origin_cell)
         if origin != dest:
             # Path is contructed in reversed order. From dest to origin.
@@ -160,10 +167,11 @@ class GridLayer(cocos.layer.Layer):
             sprite.do(move)
             
         # Delete the reachable cells and deselect the sprite
+        self.clear_cells(self.selected.reachable_cells)
         del self.selected.reachable_cells
         del self.selected.predecessor
         self.selected = None
-        self.clear_grid()
+        
     
     def from_grid_to_pixel(self, i, j):
         "Converts grid position to the center position of the cell in pixel"
@@ -203,21 +211,24 @@ class GridLayer(cocos.layer.Layer):
     def on_mouse_press(self, x, y, button, modifiers):
         # Get the virtual coords, in case window was resized.
         x, y = director.get_virtual_coordinates(x, y)
-        i, j = self.get_cell_from_pixel(x, y)
+        i, j = self.from_pixel_to_grid(*self.point_to_local((x, y)) )
         if i is None or j is None: return
 
         # If we click while something is selected, move it there.
         if self.selected:
+            self.selected.turn_completed = True
             self.move_sprite(self.selected, i, j)
+            self.end_turn()
             return
         
         # Did we click on the ship?
         # Transform mouse pos in local coord
         x,y = self.point_to_local((x,y))
         for z, child in self.children:
-            rect = child.get_AABB()
-            if rect.contains(x, y):
-                self.selected = child
+            if child.player == self.player_turn and not child.turn_completed:
+                rect = child.get_AABB()
+                if rect.contains(x, y):
+                    self.selected = child
         
         # We clicked on a ship, so calculate and highlight the reachable cells
         if self.selected:
@@ -226,26 +237,42 @@ class GridLayer(cocos.layer.Layer):
             reachable_cells, predecessor = self.get_reachable_cells(origin, DIST)
             self.selected.reachable_cells = map(self._from_cell_number_to_coord, reachable_cells)
             self.selected.predecessor = predecessor
-            for i, j in self.selected.reachable_cells:
-                self.squares[i][j].colors = [128, 0, 128, 100] * 4
+            self.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
+        
+        self.end_turn()
+        
+    def highlight_cells(self, cells, color):
+        """Highlight the cells in the list in the given color."""
+        for i, j in cells:
+                self.squares[i][j].colors = color * 4
+    
+    def highlight_player(self, player):
+        """Highlight the player ships"""
+        cells = []
+        for ship in player.fleet:
+            cells.append(self.from_pixel_to_grid(*(ship.position)))
+        self.highlight_cells(cells, [0, 128, 128, 100])
+    
+    def clear_cells(self, cells):
+        """Remove any highlight from the cells"""
+        self.highlight_cells(cells, [0, 0, 0, 0])
+    
+    def end_turn(self):
+        """If all ships played, change player"""
+        if self.player_turn.turn_completed():
+            self.player_turn.reset_ships_turn()
+            self.player_turn = next(self.players)
+            self.highlight_player(self.player_turn)
+            
     
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment
         pass
 
-def main():
-    director.init(width = 1600, height=900)
-    grid_layer = GridLayer ()
-    # How many ships ?
-    for _ in range(2):
-        i, j = grid_layer.get_random_free_cell()
-        ship = cocos.sprite.Sprite("ship.png", position=grid_layer.from_grid_to_pixel(i,j))
-        ship.scale = float(CELL_WIDTH) / ship.width
-        grid_layer.add(ship)
-
-    main_scene = cocos.scene.Scene(grid_layer)
-    director.show_FPS = True
-    director.run (main_scene)
-
-if __name__ == '__main__':
-    main()
+    def add_player_fleet(self, player):
+        """Add the ships from the layer"""
+        for ship in player.fleet:
+            i, j = self.get_random_free_cell()
+            x, y = self.from_grid_to_pixel(i,j)
+            ship.position = (x, y)
+            self.add(ship)
