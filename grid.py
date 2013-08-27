@@ -1,9 +1,3 @@
-# This code is so you can run the samples without installing the package
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-#
-
 
 import math
 from random import shuffle, randint
@@ -42,17 +36,12 @@ class GridLayer(cocos.layer.Layer):
         # How many walls? They will all be different. So not bigger than grid size!
         # This is a bit slow on start, but won't be part of the game, so who cares?
         shuffle(coords)
-        self.walls= coords[:150]
+        self.walls= coords[:100]
         
         # Background image
         img=pyglet.resource.image("outer-space.jpg")
-        # Resize to the grid
-        img.width, img.height = COL*CELL_WIDTH, ROW*CELL_WIDTH
-        self.bg = cocos.sprite.Sprite(img, anchor=(0,0))
-        self.bg.batch=self.batch
-        self.bg.group=pyglet.graphics.OrderedGroup(0)
-        
-        
+        self.bg_texture = pyglet.image.TileableTexture.create_for_image(img)
+
         # We construct the quads and store them for future reference
         for row in range(ROW):
             for col in range(COL):
@@ -115,6 +104,10 @@ class GridLayer(cocos.layer.Layer):
     def draw(self, *args, **kwargs):
         glPushMatrix()
         self.transform()
+        # Draw the background as a tileable texture over the grid.
+        grid_width, grid_height = COL*CELL_WIDTH, ROW*CELL_WIDTH
+        self.bg_texture.blit_tiled(0, 0, 0, grid_width, grid_height)
+        # Draw the rest
         self.batch.draw()
         glPopMatrix()
     
