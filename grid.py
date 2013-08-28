@@ -103,6 +103,7 @@ class GridLayer(cocos.layer.Layer):
         self.players = cycle(players)
         for player in players:
             self.add_player_fleet(player)
+        # Select the first player from the list as the current one
         self.player_turn = next(self.players)
         self.highlight_player(self.player_turn)
         # Selected object from the grid

@@ -30,10 +30,10 @@ class Player(object):
     
     def turn_completed(self):
         """Test if all ships have played"""
-        completed = True
         for ship in self.fleet:
-            completed = completed and ship.turn_completed
-        return completed
+            if not ship.turn_completed:
+                return False
+        return True
     
     def reset_ships_turn(self):
         """Reset the ships turn_completed"""
