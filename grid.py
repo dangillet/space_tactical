@@ -1,6 +1,5 @@
 
 import math
-from itertools import cycle
 from random import shuffle, randint
 import numpy as np
 from scipy.sparse import lil_matrix
@@ -18,7 +17,7 @@ DIST = 5
 
 
 class GridLayer(cocos.layer.Layer):
-    def __init__(self, players):
+    def __init__(self, battle):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
         # Just for this demo. Remove when we'll have some scheduled methods.
@@ -95,20 +94,12 @@ class GridLayer(cocos.layer.Layer):
         # And convert this huge matrix to a sparse matrix.
         self.dist_mat = self.dist_mat.tocsc()
         
+        # Keep a reference to the battle object
+        self.battle = battle
+        
         # Move a bit the grid, so it doesn't stay stucked at the bottom left of the screen
         self.anchor = (50,50)
         self.position = (50,50)
-        
-        # Player list
-        self.players = cycle(players)
-        for player in players:
-            self.add_player_fleet(player)
-        # Select the first player from the list as the current one
-        self.player_turn = next(self.players)
-        self.highlight_player(self.player_turn)
-        # Selected object from the grid
-        self.selected = None
-        
     
     def draw(self, *args, **kwargs):
         glPushMatrix()
@@ -146,12 +137,12 @@ class GridLayer(cocos.layer.Layer):
         "Move sprite to the selected grid location"
         if self._is_invalid_grid(i,j):
             return
-        if (i,j) not in self.selected.reachable_cells:
+        if (i,j) not in sprite.reachable_cells:
             return
         # Reconstruct the path
-        dest = self._from_coord_to_cell_number(i,j)
+        dest = self.from_coord_to_cell_number(i,j)
         origin_cell = self.from_pixel_to_grid(*(sprite.position))
-        origin = self._from_coord_to_cell_number(*origin_cell)
+        origin = self.from_coord_to_cell_number(*origin_cell)
         if origin != dest:
             # Path is contructed in reversed order. From dest to origin.
             path=[dest]
@@ -164,14 +155,14 @@ class GridLayer(cocos.layer.Layer):
             move = InstantAction()
             # Sequence moves to the next grid
             for destination in reversed(path):
-                move = move + MoveTo(self.from_grid_to_pixel(*self._from_cell_number_to_coord(destination)), 0.3)
+                move = move + MoveTo(self.from_grid_to_pixel(*self.from_cell_number_to_coord(destination)), 0.3)
             sprite.do(move)
             
         # Delete the reachable cells and deselect the sprite
-        self.clear_cells(self.selected.reachable_cells)
-        del self.selected.reachable_cells
-        del self.selected.predecessor
-        self.selected = None
+        self.clear_cells(sprite.reachable_cells)
+        del sprite.reachable_cells
+        del sprite.predecessor
+        
         
     
     def from_grid_to_pixel(self, i, j):
@@ -191,7 +182,7 @@ class GridLayer(cocos.layer.Layer):
             i, j = randint(0, COL-1), randint (0, ROW-1)
         return (i,j)
     
-    def _from_cell_number_to_coord(self, number):
+    def from_cell_number_to_coord(self, number):
         """
         Cells are numbered in ascending order starting from 0 at the bottom
         left and increasing by column and then by row.
@@ -205,42 +196,26 @@ class GridLayer(cocos.layer.Layer):
         """
         return (number%COL, number//COL)
     
-    def _from_coord_to_cell_number(self, i, j):
+    def from_coord_to_cell_number(self, i, j):
         "See _from_cell_number_to_coord. Does the opposite"
         return i + j * COL
     
+    def get_entity(self, x, y):
+        "Return the entity at position x, y"
+        for z, child in self.children:
+            rect = child.get_AABB()
+            if rect.contains(x, y):
+                return child
+        return None
+                    
     def on_mouse_press(self, x, y, button, modifiers):
         # Get the virtual coords, in case window was resized.
         x, y = director.get_virtual_coordinates(x, y)
-        i, j = self.from_pixel_to_grid(*self.point_to_local((x, y)) )
-        if i is None or j is None: return
-
-        # If we click while something is selected, move it there.
-        if self.selected:
-            self.selected.turn_completed = True
-            self.move_sprite(self.selected, i, j)
-            self.end_turn()
-            return
-        
-        # Did we click on the ship?
         # Transform mouse pos in local coord
-        x,y = self.point_to_local((x,y))
-        for z, child in self.children:
-            if child.player == self.player_turn and not child.turn_completed:
-                rect = child.get_AABB()
-                if rect.contains(x, y):
-                    self.selected = child
-        
-        # We clicked on a ship, so calculate and highlight the reachable cells
-        if self.selected:
-            # Compute the cell number
-            origin = i + j * COL
-            reachable_cells, predecessor = self.get_reachable_cells(origin, DIST)
-            self.selected.reachable_cells = map(self._from_cell_number_to_coord, reachable_cells)
-            self.selected.predecessor = predecessor
-            self.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
-        
-        self.end_turn()
+        x, y = self.point_to_local((x,y))
+        i, j = self.from_pixel_to_grid(x, y)
+        if i is None or j is None: return
+        self.battle.on_mouse_press(i, j, x, y)
         
     def highlight_cells(self, cells, color):
         """Highlight the cells in the list in the given color."""
@@ -257,15 +232,7 @@ class GridLayer(cocos.layer.Layer):
     def clear_cells(self, cells):
         """Remove any highlight from the cells"""
         self.highlight_cells(cells, [0, 0, 0, 0])
-    
-    def end_turn(self):
-        """If all ships played, change player"""
-        if self.player_turn.turn_completed():
-            self.player_turn.reset_ships_turn()
-            self.player_turn = next(self.players)
-            self.highlight_player(self.player_turn)
             
-    
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment
         pass
