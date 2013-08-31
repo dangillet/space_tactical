@@ -39,3 +39,7 @@ class Player(object):
         """Reset the ships turn_completed"""
         for ship in self.fleet:
             ship.turn_completed = False
+
+class Asteroid(cocos.sprite.Sprite):
+    def __init__(self, pos):
+         super(Asteroid, self).__init__("asteroid.png", position=pos)

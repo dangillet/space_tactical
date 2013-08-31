@@ -33,7 +33,20 @@ class Battle(object):
         """
         # If we click while something is selected, move it there.
         if self.selected:
+            # If we clicked on our selected ship, deselect it and delete the reachable cells
+            if self.selected.get_AABB().contains(x, y):
+                # Delete the reachable cells
+                self.grid.clear_cells(self.selected.reachable_cells)
+                del self.selected.reachable_cells
+                del self.selected.predecessor
+                self.selected = None
+                return
+            # If we click outside of the reachable cells, ignore.
+            if (i,j) not in self.selected.reachable_cells:
+                return
+                
             self.selected.turn_completed = True
+            self.grid.clear_cells([self.grid.from_pixel_to_grid(*(self.selected.position))])
             self.grid.move_sprite(self.selected, i, j)
             self.end_turn()
             self.selected = None
@@ -47,10 +60,7 @@ class Battle(object):
         # We clicked on a ship, so calculate and highlight the reachable cells
         if self.selected:
             # Compute the cell number
-            origin = i + j * grid.COL
-            reachable_cells, predecessor = self.grid.get_reachable_cells(origin, grid.DIST)
-            self.selected.reachable_cells = map(self.grid.from_cell_number_to_coord, reachable_cells)
-            self.selected.predecessor = predecessor
+            self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, grid.DIST)
             self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
         self.end_turn()
     

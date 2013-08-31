@@ -7,9 +7,11 @@ from scipy.sparse.csgraph import dijkstra
 
 import cocos
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction
+from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy
 import pyglet
 from pyglet.gl import *
+
+import entity
 
 CELL_WIDTH = 50
 ROW, COL = 16, 30
@@ -20,16 +22,21 @@ class GridLayer(cocos.layer.Layer):
     def __init__(self, battle):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
-        # Just for this demo. Remove when we'll have some scheduled methods.
-        self.schedule( lambda x: 0 )
-        self.batch = pyglet.graphics.Batch()
+        # Batch for the grid
+        self.grid_batch = pyglet.graphics.Batch()
+        # Batch for the asteroids
+        self.sprite_batch = cocos.batch.BatchNode()
+        self.add(self.sprite_batch)
+        
+        # Keep a reference to the battle object
+        self.battle = battle
         
         # Grid squares and borders
         self.squares = [[None for _ in range(ROW)] for _ in range(COL)]
         self.borders = []
         
         # Obstacle on map
-        # self.walls=[(3,4), (5,6), (3,5), (3,6), (4,6), (4,7), (4,8)]
+        # self.entities['asteroids']=[(3,4), (5,6), (3,5), (3,6), (4,6), (4,7), (4,8)]
         # Add some random obstacles
         from itertools import product
         coord_gen = product(xrange(COL-1), xrange(ROW-1))
@@ -37,7 +44,9 @@ class GridLayer(cocos.layer.Layer):
         # How many walls? They will all be different. So not bigger than grid size!
         # This is a bit slow on start, but won't be part of the game, so who cares?
         shuffle(coords)
-        self.walls= coords[:100]
+        self.entities = {'asteroids' : [], 'ships': []}
+        self.entities['asteroids']= coords[:100]
+
         
         # Background image
         img=pyglet.resource.image("outer-space.jpg")
@@ -46,20 +55,23 @@ class GridLayer(cocos.layer.Layer):
         # We construct the quads and store them for future reference
         for row in range(ROW):
             for col in range(COL):
-                self.squares[col][row] = self.batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(1),
+                self.squares[col][row] = self.grid_batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(1),
                             ('v2f', (col*CELL_WIDTH, row*CELL_WIDTH, col*CELL_WIDTH, (row+1)*CELL_WIDTH,
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
                             ('c4B', (128, 128, 128, 0) * 4))
         # We set a different color for the walls
-        for x,y in self.walls:
-            self.squares[x][y].colors = [0, 0, 128, 150] * 4
+        for x,y in self.entities['asteroids']:
+            #self.squares[x][y].colors = [0, 0, 128, 150] * 4
+            asteroid = entity.Asteroid(self.from_grid_to_pixel(x,y))
+            asteroid.do(Repeat(RotateBy(randint(-60, 60), 1)))
+            self.sprite_batch.add(asteroid)
 
         # We build the lines of the grid.
         lines=[]
         # The horizontal lines first
         for row in range(ROW+1):
             lines.extend((0., row*CELL_WIDTH, COL*CELL_WIDTH, row*CELL_WIDTH))
-        self.borders.append(self.batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
+        self.borders.append(self.grid_batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
                     ('c4B', (255, 0, 0, 100) * (ROW+1)*2))
                     )
@@ -67,35 +79,15 @@ class GridLayer(cocos.layer.Layer):
         lines=[]
         for col in range(COL+1):
             lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, ROW*CELL_WIDTH))
-        self.borders.append(self.batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
+        self.borders.append(self.grid_batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
                     ('c4B', (255, 0, 0, 100) * (COL+1)*2))
                     )
         
         # We build the distance matrix.
-        self.dist_mat = lil_matrix((ROW*COL,ROW*COL))
-        def valid_grid(xo, yo):     # Helper function to check if we are in the grid and not in a wall
-            in_grid = not xo<0 and not yo<0 and xo<COL and yo<ROW
-            in_wall = (xo,yo) in self.walls
-            return in_grid and not in_wall
-        # Iterate over every square and check the 8 directions. If it's a valid region, add its movement
-        # cost to the distance matrix. Straight = 1; Diag = sqrt(2)
-        for j in range(ROW):
-            for i in range(COL):
-                for x_offset in (-1,0,1):
-                    for y_offset in (-1,0,1):
-                        if valid_grid(i+x_offset, j+y_offset):
-                            if x_offset and y_offset:
-                                # Allow diag if no obstacle up/down and left/right
-                                if not((i+x_offset, j) in self.walls and (i, j+y_offset) in self.walls):
-                                    self.dist_mat[ i + j*COL, (i+x_offset) + (j+y_offset) * COL] = math.sqrt(2)
-                            elif x_offset or y_offset:
-                                self.dist_mat[i + j*COL, (i+x_offset) + (j+y_offset) * COL] = 1
-        # And convert this huge matrix to a sparse matrix.
-        self.dist_mat = self.dist_mat.tocsc()
-        
-        # Keep a reference to the battle object
-        self.battle = battle
+        self.dist_mat = DistanceMatrix(ROW, COL)
+        for asteroid in self.entities['asteroids']:
+            self.dist_mat.add_obstacle(*asteroid)
         
         # Move a bit the grid, so it doesn't stay stucked at the bottom left of the screen
         self.anchor = (50,50)
@@ -108,7 +100,7 @@ class GridLayer(cocos.layer.Layer):
         grid_width, grid_height = COL*CELL_WIDTH, ROW*CELL_WIDTH
         self.bg_texture.blit_tiled(0, 0, 0, grid_width, grid_height)
         # Draw the rest
-        self.batch.draw()
+        self.grid_batch.draw()
         glPopMatrix()
     
     def from_pixel_to_grid(self, x, y):
@@ -128,7 +120,7 @@ class GridLayer(cocos.layer.Layer):
         "Removes highlights from the grid"
         for row in range(ROW):
             for col in range(COL):
-                if (col,row) not in self.walls:
+                if (col,row) not in self.entities['asteroids']:
                     self.squares[col][row].colors = [128, 128, 128, 0] * 4
                 else:
                     self.squares[col][row].colors = [0, 0, 128, 150] * 4
@@ -137,48 +129,42 @@ class GridLayer(cocos.layer.Layer):
         "Move sprite to the selected grid location"
         if self._is_invalid_grid(i,j):
             return
-        if (i,j) not in sprite.reachable_cells:
-            return
         # Reconstruct the path
-        dest = self.from_coord_to_cell_number(i,j)
-        origin_cell = self.from_pixel_to_grid(*(sprite.position))
-        origin = self.from_coord_to_cell_number(*origin_cell)
-        if origin != dest:
-            # Path is contructed in reversed order. From dest to origin.
-            path=[dest]
+        i0, j0 = self.from_pixel_to_grid(*(sprite.position))
+        path = self.dist_mat.reconstruct_path(i0, j0, i, j, sprite.predecessor)
+        
+        # Initialize the move with an empty action
+        move = InstantAction()
+        # Sequence moves to the next grid
+        for m, n in path:
+            move = move + MoveTo(self.from_grid_to_pixel(m, n), 0.3)
+        sprite.do(move)
+        # Update the position in entities['ships']
+        self.entities['ships'].remove( (i0, j0) )
+        self.entities['ships'].append( (i, j) )
             
-            while sprite.predecessor[dest] != origin:
-                step_grid = sprite.predecessor[dest]
-                path.append(step_grid)
-                dest = step_grid
-            # Initialize the move with an empty action
-            move = InstantAction()
-            # Sequence moves to the next grid
-            for destination in reversed(path):
-                move = move + MoveTo(self.from_grid_to_pixel(*self.from_cell_number_to_coord(destination)), 0.3)
-            sprite.do(move)
-            
-        # Delete the reachable cells and deselect the sprite
+        # Delete the reachable cells
         self.clear_cells(sprite.reachable_cells)
         del sprite.reachable_cells
         del sprite.predecessor
         
-        
-    
     def from_grid_to_pixel(self, i, j):
         "Converts grid position to the center position of the cell in pixel"
         return (i*CELL_WIDTH + CELL_WIDTH/2, j*CELL_WIDTH + CELL_WIDTH/2)
         
-    def get_reachable_cells(self, origin, distance):
-        "Returns all the cells reachable from origin and the predecessor matrix"
-        dist, predecessor = dijkstra(self.dist_mat, indices=origin, return_predecessors=True)
-        # Only take those where dist is reachable
-        return np.argwhere(dist <= DIST).flatten(), predecessor
+    def get_reachable_cells(self, i, j, distance):
+        """
+        Forward this to the distance matrix. Remove any other ships from
+        reachable cells so we can move through ships but not stop on another one.
+        """
+        r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, distance)
+        r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
+        return r_cells, predecessor
     
     def get_random_free_cell(self):
         "Returns a cell without obstacle"
         i, j = randint(0, COL-1), randint (0, ROW-1)
-        while (i,j) in self.walls:
+        while (i,j) in self.entities['asteroids']:
             i, j = randint(0, COL-1), randint (0, ROW-1)
         return (i,j)
     
@@ -203,6 +189,8 @@ class GridLayer(cocos.layer.Layer):
     def get_entity(self, x, y):
         "Return the entity at position x, y"
         for z, child in self.children:
+            # Do not look for the sprite_batch which contains only obstacles
+            if isinstance(child, cocos.batch.BatchNode): continue
             rect = child.get_AABB()
             if rect.contains(x, y):
                 return child
@@ -241,6 +229,110 @@ class GridLayer(cocos.layer.Layer):
         """Add the ships from the layer"""
         for ship in player.fleet:
             i, j = self.get_random_free_cell()
+            self.entities['ships'].append((i, j))
             x, y = self.from_grid_to_pixel(i,j)
             ship.position = (x, y)
             self.add(ship)
+
+class DistanceMatrix(object):
+    """
+    Distance matrix where we can add obstacles.
+    Can also be used to recontruct a shortest path, giving the predecessor matrix.
+    """
+    def __init__(self, row, col):
+        self.row, self.col = row, col
+        self.dist_mat = lil_matrix((self.row*self.col, self.row*self.col))
+        # Construct distance matrix for an empty grid
+        # cost to the distance matrix. Straight = 1; Diag = sqrt(2)
+        for j in range(self.row):
+            for i in range(self.col):
+                for x_offset in (-1,0,1):
+                    for y_offset in (-1,0,1):
+                        if self.valid_grid(i+x_offset, j+y_offset):
+                            if x_offset and y_offset:
+                                self.dist_mat[ i + j*self.col, (i+x_offset) + (j+y_offset) * self.col] = math.sqrt(2)
+                            elif x_offset or y_offset:
+                                self.dist_mat[i + j*self.col, (i+x_offset) + (j+y_offset) * self.col] = 1
+
+        # And convert this huge matrix to a sparse matrix.
+        self.dist_mat = self.dist_mat.tocsc()
+    
+    def valid_grid(self, xo, yo):     
+        "Helper function to check if we are in the grid and not in a wall."
+        in_grid = not xo<0 and not yo<0 and xo<self.col and yo<self.row
+        return in_grid
+    
+    def add_obstacle(self, i, j):
+        "Add obstacle at position i,j"
+        dist_mat = self.dist_mat.tolil()
+        grid_number = self.from_coord_to_cell_number(i, j)
+
+        # Check if the new obstacle is set at a diagonal from another obstacle.
+        # Example: we add an obstacle at 4 and there was already an obstacle at 8:
+        # -------------
+        # | 6 | 7 | X |
+        # -------------
+        # | 3 | X | 5 |
+        # -------------
+        # | 0 | 1 | 2 |
+        # -------------
+        # Deny movements between 5 and 7.
+        for x in (-1, 1):
+            for y in (-1, 1):
+                if self.valid_grid(i+x, j+y) and dist_mat[grid_number, self.from_coord_to_cell_number(i+x, j+y)] == 0:
+                    dist_mat[self.from_coord_to_cell_number(i, j+y), self.from_coord_to_cell_number(i+x, j)] = 0
+                    dist_mat[self.from_coord_to_cell_number(i+x, j), self.from_coord_to_cell_number(i, j+y)] = 0
+                    
+        # Set to 0 the whole col at grid_num as we cannot move into this position.
+        dist_mat[: ,grid_number] = 0
+        
+        # Set to 0 the whole row at grid_num as this is an obstacle and we cannot move
+        # from this position.
+        dist_mat[grid_number, :] = 0    
+   
+        # And update the distance matrix in csc format
+        self.dist_mat = dist_mat.tocsc()
+        
+    def from_cell_number_to_coord(self, number):
+        """
+        Cells are numbered in ascending order starting from 0 at the bottom
+        left and increasing by column and then by row.
+        -------------
+        | 3 | 4 | 5 |
+        -------------
+        | 0 | 1 | 2 |
+        -------------
+        This function returns the coordinates from a cell number.
+        So cell 5 will return (1,1)
+        """
+        return (number%self.col, number//self.col)
+    
+    def from_coord_to_cell_number(self, i, j):
+        "See _from_cell_number_to_coord. Does the opposite"
+        return i + j * self.col
+    
+    def get_reachable_cells(self, i, j, distance):
+        "Returns all the cells reachable from (i, j) and the predecessor matrix"
+        origin = self.from_coord_to_cell_number(i, j)
+        dist, predecessor = dijkstra(self.dist_mat, indices=origin, return_predecessors=True)
+        # Only take those where dist is reachable
+        dist = np.argwhere(dist <= DIST).flatten()
+        # And convert it to a list of grid coordinates
+        dist = map(self.from_cell_number_to_coord, dist)
+        return dist, predecessor
+
+    def reconstruct_path(self, i0, j0, i, j, predecessor):
+        "Reconstruct the shortest path going from (i0, j0) to (i, j)."
+        origin = self.from_coord_to_cell_number(i0, j0)
+        dest = self.from_coord_to_cell_number(i,j)
+        path = None
+        if origin != dest:
+            # Path is contructed in reversed order. From dest to origin.
+            path=[(i, j)]
+            
+            while predecessor[dest] != origin:
+                step_grid = predecessor[dest]
+                path.append(self.from_cell_number_to_coord(step_grid))
+                dest = step_grid
+        return reversed(path)
+                
