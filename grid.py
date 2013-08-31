@@ -1,4 +1,3 @@
-
 import math
 from random import shuffle, randint
 import numpy as np
@@ -11,7 +10,7 @@ from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy
 import pyglet
 from pyglet.gl import *
 
-import entity
+import entity, simplexnoise
 
 CELL_WIDTH = 50
 ROW, COL = 16, 30
@@ -35,17 +34,27 @@ class GridLayer(cocos.layer.Layer):
         self.squares = [[None for _ in range(ROW)] for _ in range(COL)]
         self.borders = []
         
+        self.entities = {'asteroids' : [], 'ships': []}
+        
         # Obstacle on map
         # self.entities['asteroids']=[(3,4), (5,6), (3,5), (3,6), (4,6), (4,7), (4,8)]
         # Add some random obstacles
-        from itertools import product
-        coord_gen = product(xrange(COL-1), xrange(ROW-1))
-        coords = list(coord_gen)
+        #from itertools import product
+        #coord_gen = product(xrange(COL-1), xrange(ROW-1))
+        #coords = list(coord_gen)
         # How many walls? They will all be different. So not bigger than grid size!
         # This is a bit slow on start, but won't be part of the game, so who cares?
-        shuffle(coords)
-        self.entities = {'asteroids' : [], 'ships': []}
-        self.entities['asteroids']= coords[:100]
+        #shuffle(coords)
+        OCTAVE, PERSISTENCE, FREQ = 4, 0.6, 10
+        SPARSITY, THRESHOLD = 160, 0
+        noise = np.zeros(shape=(COL, ROW))
+        for x in range(COL):
+            for y in range(ROW):
+                v = simplexnoise.scaled_octave_noise_2d(OCTAVE, PERSISTENCE, FREQ, 0, 255, x, y)
+                c = v - SPARSITY
+                if c<0: c = 0
+                noise[x][y] = 255 - (math.pow(0.2, c) * 255)
+        self.entities['asteroids']= zip(*np.where(noise> THRESHOLD))
 
         
         # Background image
@@ -316,7 +325,7 @@ class DistanceMatrix(object):
         origin = self.from_coord_to_cell_number(i, j)
         dist, predecessor = dijkstra(self.dist_mat, indices=origin, return_predecessors=True)
         # Only take those where dist is reachable
-        dist = np.argwhere(dist <= DIST).flatten()
+        dist = np.argwhere(dist <= distance).flatten()
         # And convert it to a list of grid coordinates
         dist = map(self.from_cell_number_to_coord, dist)
         return dist, predecessor
