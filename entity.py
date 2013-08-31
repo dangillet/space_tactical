@@ -1,7 +1,7 @@
 import cocos
 
 class Ship(cocos.sprite.Sprite):
-    def __init__( self, image, player=None):
+    def __init__( self, image, player=None, distance= 5):
          """Initialize the Ship
             player: Player
                 The player controlling this ship
@@ -10,6 +10,7 @@ class Ship(cocos.sprite.Sprite):
          """
          super(Ship, self).__init__(image)
          self.player = player
+         self.distance = distance
          self.turn_completed = False
 
 class Player(object):

@@ -1,3 +1,4 @@
+import random
 from itertools import cycle
 import grid, entity
 
@@ -10,7 +11,7 @@ class Battle(object):
             self.players.append(player)
             # How many ships ?
             for _ in range(2):
-                ship = entity.Ship("ship.png")
+                ship = entity.Ship("ship.png", distance=random.randint(2,6))
                 ship.scale = float(grid.CELL_WIDTH) / ship.width
                 player.add_ship(ship)
         self.grid = grid.GridLayer(self)
@@ -60,7 +61,7 @@ class Battle(object):
         # We clicked on a ship, so calculate and highlight the reachable cells
         if self.selected:
             # Compute the cell number
-            self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, grid.DIST)
+            self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
             self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
         self.end_turn()
     
