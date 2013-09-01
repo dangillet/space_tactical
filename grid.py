@@ -13,7 +13,7 @@ from pyglet.gl import *
 import entity, simplexnoise
 
 CELL_WIDTH = 50
-ROW, COL = 16, 30
+ROW, COL = 18, 30
 DIST = 5
 
 
@@ -46,15 +46,14 @@ class GridLayer(cocos.layer.Layer):
         # This is a bit slow on start, but won't be part of the game, so who cares?
         #shuffle(coords)
         OCTAVE, PERSISTENCE, FREQ = 4, 0.6, 10
-        SPARSITY, THRESHOLD = 160, 0
+        SPARSITY = 165
         noise = np.zeros(shape=(COL, ROW))
-        for x in range(COL):
-            for y in range(ROW):
-                v = simplexnoise.scaled_octave_noise_2d(OCTAVE, PERSISTENCE, FREQ, 0, 255, x, y)
-                c = v - SPARSITY
-                if c<0: c = 0
-                noise[x][y] = 255 - (math.pow(0.2, c) * 255)
-        self.entities['asteroids']= zip(*np.where(noise> THRESHOLD))
+        for x, y in np.ndindex(COL, ROW):
+            v = simplexnoise.scaled_octave_noise_2d(OCTAVE, PERSISTENCE, FREQ, 0, 255, x, y)
+            c = v - SPARSITY
+            if c<0: c = 0
+            noise[x][y] = 255 - (math.pow(0.1, c) * 255)
+        self.entities['asteroids']= zip(*np.where(noise> 0.))
 
         
         # Background image
@@ -170,8 +169,22 @@ class GridLayer(cocos.layer.Layer):
         r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
         return r_cells, predecessor
     
-    def get_random_free_cell(self):
-        "Returns a cell without obstacle"
+    def get_random_free_cells(self, side):
+        "Returns a generator giving cells without obstacle in an area close to a border"
+        if side == 0:
+            left, right, top, bottom = 0, 3, ROW*2/3, ROW/3
+        elif side == 1:
+            left, right, top, bottom = COL-3, COL-1, ROW*2/3, ROW/3
+        elif side == 2:
+            left, right, top, bottom = COL/3, COL*2/3, ROW-1, ROW-3
+        else:
+            left, right, top, bottom = COL/3, COL*2/3, 3, 0
+        coords = [(x, y) for x in range(left, right) for y in range(bottom, top) if (x, y) not in self.entities['asteroids']]
+        shuffle(coords)
+        return coords
+
+
+
         i, j = randint(0, COL-1), randint (0, ROW-1)
         while (i,j) in self.entities['asteroids']:
             i, j = randint(0, COL-1), randint (0, ROW-1)
@@ -234,10 +247,11 @@ class GridLayer(cocos.layer.Layer):
         # Nothing to do for the moment
         pass
 
-    def add_player_fleet(self, player):
-        """Add the ships from the layer"""
-        for ship in player.fleet:
-            i, j = self.get_random_free_cell()
+    def add_player_fleet(self, player, side):
+        """Add the ships from the player"""
+        starting_cells = self.get_random_free_cells(side)
+        for a, ship in enumerate(player.fleet):
+            i, j = starting_cells[a]
             self.entities['ships'].append((i, j))
             x, y = self.from_grid_to_pixel(i,j)
             ship.position = (x, y)

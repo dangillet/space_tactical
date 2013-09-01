@@ -6,12 +6,12 @@ class Battle(object):
     def __init__(self):
         self.players = []
         #How many players?
-        for i in range(2):
+        for i in range(4):
             player = entity.Player("Player %d" % i)
             self.players.append(player)
             # How many ships ?
             for _ in range(2):
-                ship = entity.Ship("ship.png", distance=random.randint(2,6))
+                ship = entity.Ship("ship.png", distance=random.randint(2,6) +0.5)
                 ship.scale = float(grid.CELL_WIDTH) / ship.width
                 player.add_ship(ship)
         self.grid = grid.GridLayer(self)
@@ -19,8 +19,8 @@ class Battle(object):
         # Player list
         self.players_turn = cycle(self.players)
         # Add the ships to the grid
-        for player in self.players:
-            self.grid.add_player_fleet(player)
+        for i, player in enumerate(self.players):
+            self.grid.add_player_fleet(player, i)
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
         self.grid.highlight_player(self.current_player)
