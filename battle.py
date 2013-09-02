@@ -34,10 +34,13 @@ class Battle(object):
         """
         # If we click while something is selected, move it there.
         if self.selected:
-            # If we clicked on our selected ship, deselect it and delete the reachable cells
+            # If we clicked on our selected ship, deselect it.
+            # Delete the reachable cells and the targets
             if self.selected.get_AABB().contains(x, y):
                 # Delete the reachable cells
                 self.grid.clear_cells(self.selected.reachable_cells)
+                # If targets are selected
+                self.deselect_targets()
                 del self.selected.reachable_cells
                 del self.selected.predecessor
                 self.selected = None
@@ -60,8 +63,15 @@ class Battle(object):
                 self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
                 self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
                 # Get targets in range
-                #self.targets = self.grid.get_targets(self.selected)
+                self.targets = self.grid.get_targets(self.selected)
+                self.grid.highlight_ships(self.targets, [255, 0, 0, 100])
 
+    
+    def deselect_targets(self):
+        "Deselect the targeted ships"
+        if self.targets:
+            self.grid.clear_ships_highlight(self.targets)
+            self.targets = []
     
     def end_turn(self):
         """End the turn of the current ship. If all ships played, change player"""
@@ -70,6 +80,8 @@ class Battle(object):
             self.grid.clear_cells([self.grid.from_pixel_to_grid(*(self.selected.position))])
             if hasattr(self.selected, "reachable_cells"):
                 self.grid.delete_reachable_cells(self.selected)
+            # If targets are selected
+            self.deselect_targets()
             self.selected = None
         if self.current_player.turn_completed():
             self.current_player.reset_ships_turn()

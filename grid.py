@@ -45,7 +45,7 @@ class GridLayer(cocos.layer.Layer):
         # How many walls? They will all be different. So not bigger than grid size!
         # This is a bit slow on start, but won't be part of the game, so who cares?
         #shuffle(coords)
-        OCTAVE, PERSISTENCE, FREQ = 1, 0.1, 0.2
+        OCTAVE, PERSISTENCE, FREQ = 1, 0.1, 0.3
         SPARSITY = 165
         noise = np.zeros(shape=(COL, ROW))
         for x, y in np.ndindex(COL, ROW):
@@ -162,6 +162,11 @@ class GridLayer(cocos.layer.Layer):
         "Converts grid position to the center position of the cell in pixel"
         return (i*CELL_WIDTH + CELL_WIDTH/2, j*CELL_WIDTH + CELL_WIDTH/2)
         
+    def distance(self, objA, objB):
+        i0, j0 = self.from_pixel_to_grid(*(objA.position))
+        i1, j1 = self.from_pixel_to_grid(*(objB.position))
+        return math.sqrt((i0-i1)**2 + (j0-j1)**2)
+    
     def get_reachable_cells(self, i, j, distance):
         """
         Forward this to the distance matrix. Remove any other ships from
@@ -185,31 +190,11 @@ class GridLayer(cocos.layer.Layer):
         shuffle(coords)
         return coords
 
-
-
         i, j = randint(0, COL-1), randint (0, ROW-1)
         while (i,j) in self.entities['asteroids']:
             i, j = randint(0, COL-1), randint (0, ROW-1)
         return (i,j)
-    
-    def from_cell_number_to_coord(self, number):
-        """
-        Cells are numbered in ascending order starting from 0 at the bottom
-        left and increasing by column and then by row.
-        -------------
-        | 4 | 5 | 6 |
-        -------------
-        | 0 | 1 | 2 |
-        -------------
-        This function returns the coordinates from a cell number.
-        So cell 5 will return (1,1)
-        """
-        return (number%COL, number//COL)
-    
-    def from_coord_to_cell_number(self, i, j):
-        "See _from_cell_number_to_coord. Does the opposite"
-        return i + j * COL
-    
+
     def get_entity(self, x, y):
         "Return the entity at position x, y"
         for z, child in self.children:
@@ -219,7 +204,18 @@ class GridLayer(cocos.layer.Layer):
             if rect.contains(x, y):
                 return child
         return None
-                    
+
+    def get_targets(self, ship):
+        "Returns the list of all ennemy ships in range"
+        current_player = ship.player
+        targets = []
+        for z, child in self.children:
+            # Do not look for the sprite_batch which contains only obstacles
+            if isinstance(child, cocos.batch.BatchNode): continue
+            if child.player != current_player and self.distance(ship, child) <= ship.weapon_range:
+                targets.append(child)
+        return targets
+
     def on_mouse_press(self, x, y, button, modifiers):
         # Get the virtual coords, in case window was resized.
         x, y = director.get_virtual_coordinates(x, y)
@@ -236,14 +232,21 @@ class GridLayer(cocos.layer.Layer):
     
     def highlight_player(self, player):
         """Highlight the player ships"""
+        self.highlight_ships(player.fleet, [0, 128, 128, 100])
+    
+    def highlight_ships(self, ships, color):
         cells = []
-        for ship in player.fleet:
+        for ship in ships:
             cells.append(self.from_pixel_to_grid(*(ship.position)))
-        self.highlight_cells(cells, [0, 128, 128, 100])
+        self.highlight_cells(cells, color)
     
     def clear_cells(self, cells):
         """Remove any highlight from the cells"""
         self.highlight_cells(cells, [0, 0, 0, 0])
+    
+    def clear_ships_highlight(self, ships):
+        """Remove any highlight from the ships"""
+        self.highlight_ships(ships, [0, 0, 0, 0])
             
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment
@@ -361,7 +364,7 @@ class DistanceMatrix(object):
         # And convert it to a list of grid coordinates
         dist = map(self.from_cell_number_to_coord, dist)
         return dist, predecessor
-
+    
     def reconstruct_path(self, i0, j0, i, j, predecessor):
         "Reconstruct the shortest path going from (i0, j0) to (i, j)."
         origin = self.from_coord_to_cell_number(i0, j0)
