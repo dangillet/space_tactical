@@ -45,7 +45,7 @@ class GridLayer(cocos.layer.Layer):
         # How many walls? They will all be different. So not bigger than grid size!
         # This is a bit slow on start, but won't be part of the game, so who cares?
         #shuffle(coords)
-        OCTAVE, PERSISTENCE, FREQ = 4, 0.6, 10
+        OCTAVE, PERSISTENCE, FREQ = 1, 0.1, 0.2
         SPARSITY = 165
         noise = np.zeros(shape=(COL, ROW))
         for x, y in np.ndindex(COL, ROW):
@@ -150,8 +150,10 @@ class GridLayer(cocos.layer.Layer):
         # Update the position in entities['ships']
         self.entities['ships'].remove( (i0, j0) )
         self.entities['ships'].append( (i, j) )
-            
-        # Delete the reachable cells
+        self.delete_reachable_cells(sprite)
+        
+    def delete_reachable_cells(self, sprite):
+        "Delete the reachable cells"
         self.clear_cells(sprite.reachable_cells)
         del sprite.reachable_cells
         del sprite.predecessor
@@ -245,7 +247,8 @@ class GridLayer(cocos.layer.Layer):
             
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment
-        pass
+        if symbol == pyglet.window.key.SPACE:
+            self.battle.end_turn()
 
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""
@@ -285,9 +288,24 @@ class DistanceMatrix(object):
         in_grid = not xo<0 and not yo<0 and xo<self.col and yo<self.row
         return in_grid
     
+    def add_difficult_terrain(self, i, j):
+        "Add difficult terrain at position i,j"
+        dist_mat = self.dist_mat.tolil()
+        
+        for x_offset in (-1,0,1):
+            for y_offset in (-1,0,1):
+                if self.valid_grid(i+x_offset, j+y_offset):
+                    if x_offset and y_offset:
+                        dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = 2*math.sqrt(2)
+                    elif x_offset or y_offset:
+                        dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = 2
+        
+        self.dist_mat = dist_mat.tocsc()
+    
     def add_obstacle(self, i, j):
         "Add obstacle at position i,j"
         dist_mat = self.dist_mat.tolil()
+        
         grid_number = self.from_coord_to_cell_number(i, j)
 
         # Check if the new obstacle is set at a diagonal from another obstacle.
@@ -311,7 +329,7 @@ class DistanceMatrix(object):
         
         # Set to 0 the whole row at grid_num as this is an obstacle and we cannot move
         # from this position.
-        dist_mat[grid_number, :] = 0    
+        dist_mat[grid_number, :] = 0 
    
         # And update the distance matrix in csc format
         self.dist_mat = dist_mat.tocsc()

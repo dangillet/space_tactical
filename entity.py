@@ -11,6 +11,7 @@ class Ship(cocos.sprite.Sprite):
          super(Ship, self).__init__(image)
          self.player = player
          self.distance = distance
+         self.weapon_range = 5
          self.turn_completed = False
 
 class Player(object):

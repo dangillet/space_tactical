@@ -24,8 +24,8 @@ class Battle(object):
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
         self.grid.highlight_player(self.current_player)
-        # Selected object from the grid
-        self.selected = None
+        # Selected object from the grid and list of targets in range
+        self.selected, self.targets = None, None
     
     def on_mouse_press(self, i, j, x, y):
         """
@@ -45,12 +45,9 @@ class Battle(object):
             # If we click outside of the reachable cells, ignore.
             if (i,j) not in self.selected.reachable_cells:
                 return
-                
-            self.selected.turn_completed = True
-            self.grid.clear_cells([self.grid.from_pixel_to_grid(*(self.selected.position))])
+
             self.grid.move_sprite(self.selected, i, j)
             self.end_turn()
-            self.selected = None
             return
         
         if self.selected is None:
@@ -58,15 +55,22 @@ class Battle(object):
             if entity is not None and entity.player == self.current_player \
                     and not entity.turn_completed:
                 self.selected = entity
-        # We clicked on a ship, so calculate and highlight the reachable cells
-        if self.selected:
-            # Compute the cell number
-            self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
-            self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
-        self.end_turn()
+                # We clicked on a ship, so calculate and highlight the reachable cells
+                # Compute the cell number
+                self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
+                self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
+                # Get targets in range
+                #self.targets = self.grid.get_targets(self.selected)
+
     
     def end_turn(self):
-        """If all ships played, change player"""
+        """End the turn of the current ship. If all ships played, change player"""
+        if self.selected is not None:
+            self.selected.turn_completed = True
+            self.grid.clear_cells([self.grid.from_pixel_to_grid(*(self.selected.position))])
+            if hasattr(self.selected, "reachable_cells"):
+                self.grid.delete_reachable_cells(self.selected)
+            self.selected = None
         if self.current_player.turn_completed():
             self.current_player.reset_ships_turn()
             self.current_player = next(self.players_turn)
