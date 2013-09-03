@@ -6,16 +6,20 @@ from scipy.sparse.csgraph import dijkstra
 
 import cocos
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy
+from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, CallFunc, CallFuncS
 import pyglet
 from pyglet.gl import *
 
-import entity, simplexnoise
+import entity, simplexnoise, library
 
 CELL_WIDTH = 50
 ROW, COL = 18, 30
-DIST = 5
 
+PLAYER_TURN = [128, 128, 0, 100]
+SHIP_SELECTED = [250, 250, 0, 100]
+REACHABLE_CELLS = [128, 0, 128, 100]
+TARGET = [255, 0, 0, 100]
+CLEAR_CELL = [0, 0, 0, 0]
 
 class GridLayer(cocos.layer.Layer):
     def __init__(self, battle):
@@ -46,7 +50,7 @@ class GridLayer(cocos.layer.Layer):
         # This is a bit slow on start, but won't be part of the game, so who cares?
         #shuffle(coords)
         OCTAVE, PERSISTENCE, FREQ = 1, 0.1, 0.3
-        SPARSITY = 165
+        SPARSITY = 175
         noise = np.zeros(shape=(COL, ROW))
         for x, y in np.ndindex(COL, ROW):
             v = simplexnoise.scaled_octave_noise_2d(OCTAVE, PERSISTENCE, FREQ, 0, 255, x, y)
@@ -137,8 +141,10 @@ class GridLayer(cocos.layer.Layer):
         "Move sprite to the selected grid location"
         if self._is_invalid_grid(i,j):
             return
-        # Reconstruct the path
+        
         i0, j0 = self.from_pixel_to_grid(*(sprite.position))
+        self.clear_cell(i0, j0)
+        # Reconstruct the path
         path = self.dist_mat.reconstruct_path(i0, j0, i, j, sprite.predecessor)
         
         # Initialize the move with an empty action
@@ -146,11 +152,16 @@ class GridLayer(cocos.layer.Layer):
         # Sequence moves to the next grid
         for m, n in path:
             move = move + MoveTo(self.from_grid_to_pixel(m, n), 0.3)
-        sprite.do(move)
+        # And after the move, reset the selected ship
+        deselect_action = CallFunc(self.battle.deselect_ship)
+        select_action = CallFuncS(self.battle.select_ship)
+        move = move + deselect_action + select_action
+        sprite.move_action = sprite.do(move)
         # Update the position in entities['ships']
         self.entities['ships'].remove( (i0, j0) )
         self.entities['ships'].append( (i, j) )
         self.delete_reachable_cells(sprite)
+        self.highlight_cell(i, j, SHIP_SELECTED)
         
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"
@@ -163,10 +174,21 @@ class GridLayer(cocos.layer.Layer):
         return (i*CELL_WIDTH + CELL_WIDTH/2, j*CELL_WIDTH + CELL_WIDTH/2)
         
     def distance(self, objA, objB):
+        "Returns the distance between two objects"
         i0, j0 = self.from_pixel_to_grid(*(objA.position))
         i1, j1 = self.from_pixel_to_grid(*(objB.position))
-        return math.sqrt((i0-i1)**2 + (j0-j1)**2)
+        return math.hypot((i0-i1), (j0-j1))
     
+    def clear_los(self, objA, objB):
+        "Check if both objects have a clear line of sight"
+        i0, j0 = self.from_pixel_to_grid(*(objA.position))
+        i1, j1 = self.from_pixel_to_grid(*(objB.position))
+        los = library.get_line(i0, j0, i1, j1)
+        for cell in los:
+            if cell in self.entities['asteroids']:
+                return False
+        return True
+        
     def get_reachable_cells(self, i, j, distance):
         """
         Forward this to the distance matrix. Remove any other ships from
@@ -212,7 +234,9 @@ class GridLayer(cocos.layer.Layer):
         for z, child in self.children:
             # Do not look for the sprite_batch which contains only obstacles
             if isinstance(child, cocos.batch.BatchNode): continue
-            if child.player != current_player and self.distance(ship, child) <= ship.weapon_range:
+            if child.player != current_player \
+            and self.distance(ship, child) <= ship.weapon_range \
+            and self.clear_los(ship, child):
                 targets.append(child)
         return targets
 
@@ -225,14 +249,18 @@ class GridLayer(cocos.layer.Layer):
         if i is None or j is None: return
         self.battle.on_mouse_press(i, j, x, y)
         
+    def highlight_cell(self, i, j, color):
+        "Highlight the cell in the given color."
+        self.squares[i][j].colors = color * 4
+        
     def highlight_cells(self, cells, color):
         """Highlight the cells in the list in the given color."""
         for i, j in cells:
-                self.squares[i][j].colors = color * 4
+            self.highlight_cell(i, j, color)
     
     def highlight_player(self, player):
         """Highlight the player ships"""
-        self.highlight_ships(player.fleet, [0, 128, 128, 100])
+        self.highlight_ships(player.fleet, PLAYER_TURN)
     
     def highlight_ships(self, ships, color):
         cells = []
@@ -240,13 +268,17 @@ class GridLayer(cocos.layer.Layer):
             cells.append(self.from_pixel_to_grid(*(ship.position)))
         self.highlight_cells(cells, color)
     
+    def clear_cell(self, i, j):
+        """Remove any highlight from the cell"""
+        self.highlight_cell(i, j, CLEAR_CELL)
+    
     def clear_cells(self, cells):
         """Remove any highlight from the cells"""
-        self.highlight_cells(cells, [0, 0, 0, 0])
+        self.highlight_cells(cells, CLEAR_CELL)
     
     def clear_ships_highlight(self, ships):
         """Remove any highlight from the ships"""
-        self.highlight_ships(ships, [0, 0, 0, 0])
+        self.highlight_ships(ships, CLEAR_CELL)
             
     def on_key_press(self, symbol, modifiers):
         # Nothing to do for the moment

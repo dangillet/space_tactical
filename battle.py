@@ -1,5 +1,8 @@
 import random
 from itertools import cycle
+
+from cocos.actions import CallFunc, CallFuncS
+
 import grid, entity
 
 class Battle(object):
@@ -32,40 +35,59 @@ class Battle(object):
         Called by the grid when a grid square is clicked.
         The game logic happens here.
         """
-        # If we click while something is selected, move it there.
+        # If we click while something is selected, either move, attack or deselect.
         if self.selected:
             # If we clicked on our selected ship, deselect it.
-            # Delete the reachable cells and the targets
             if self.selected.get_AABB().contains(x, y):
-                # Delete the reachable cells
-                self.grid.clear_cells(self.selected.reachable_cells)
-                # If targets are selected
-                self.deselect_targets()
-                del self.selected.reachable_cells
-                del self.selected.predecessor
-                self.selected = None
+                self.deselect_ship()
                 return
-            # If we click outside of the reachable cells, ignore.
-            if (i,j) not in self.selected.reachable_cells:
-                return
-
-            self.grid.move_sprite(self.selected, i, j)
-            self.end_turn()
-            return
-        
-        if self.selected is None:
+            # If we clicked on a target, attack it.
+            elif self.targets and not self.selected.attack_completed:
+                for ship in self.targets:
+                    if ship.get_AABB().contains(x, y):
+                        print "%s attacks %s" % (self.selected, ship)
+                        self.selected.attack_completed = True
+                        entity = self.selected
+                        self.deselect_ship()
+                        self.select_ship(entity)
+            
+            # If we clicked on a reachable cell, move the ship there
+            elif not self.selected.move_completed and (i,j) in self.selected.reachable_cells:
+                self.grid.move_sprite(self.selected, i, j)
+                self.selected.move_completed = True
+            
+        else:
             entity = self.grid.get_entity(x, y)
             if entity is not None and entity.player == self.current_player \
                     and not entity.turn_completed:
-                self.selected = entity
-                # We clicked on a ship, so calculate and highlight the reachable cells
-                # Compute the cell number
-                self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
-                self.grid.highlight_cells(self.selected.reachable_cells, [128, 0, 128, 100])
-                # Get targets in range
-                self.targets = self.grid.get_targets(self.selected)
-                self.grid.highlight_ships(self.targets, [255, 0, 0, 100])
+                self.select_ship(entity)
 
+    def select_ship(self, entity):
+        "Make the entity the selecetd ship."
+        self.selected = entity
+        self.grid.highlight_ships([self.selected], grid.SHIP_SELECTED)
+        # If ship didn't move yet, calculate and highlight the reachable cells
+        if not self.selected.move_completed:
+            i, j = self.grid.from_pixel_to_grid(*(self.selected.position))
+            self.selected.reachable_cells, self.selected.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
+            self.grid.highlight_cells(self.selected.reachable_cells, grid.REACHABLE_CELLS)
+        # Get targets in range if ship didn't attack yet
+        if not self.selected.attack_completed:
+            self.targets = self.grid.get_targets(self.selected)
+            self.grid.highlight_ships(self.targets, grid.TARGET)
+    
+    def deselect_ship(self):
+        "Deselect the currently selected ship."
+        # Clear the reachable cells if any
+        if hasattr(self.selected, 'reachable_cells'):
+            self.grid.clear_cells(self.selected.reachable_cells)
+            del self.selected.reachable_cells
+            del self.selected.predecessor
+        # If targets are selected
+        self.deselect_targets()
+        # Normal highlight for the ship
+        self.grid.highlight_ships([self.selected], grid.PLAYER_TURN)
+        self.selected = None
     
     def deselect_targets(self):
         "Deselect the targeted ships"
@@ -75,15 +97,17 @@ class Battle(object):
     
     def end_turn(self):
         """End the turn of the current ship. If all ships played, change player"""
-        if self.selected is not None:
+        if self.selected is not None and not self.selected.are_actions_running():
             self.selected.turn_completed = True
             self.grid.clear_cells([self.grid.from_pixel_to_grid(*(self.selected.position))])
             if hasattr(self.selected, "reachable_cells"):
                 self.grid.delete_reachable_cells(self.selected)
             # If targets are selected
-            self.deselect_targets()
+            if self.targets:
+                self.grid.clear_ships_highlight(self.targets)
+                self.targets = []
             self.selected = None
-        if self.current_player.turn_completed():
-            self.current_player.reset_ships_turn()
-            self.current_player = next(self.players_turn)
-            self.grid.highlight_player(self.current_player)
+            if self.current_player.turn_completed():
+                self.current_player.reset_ships_turn()
+                self.current_player = next(self.players_turn)
+                self.grid.highlight_player(self.current_player)

@@ -13,6 +13,8 @@ class Ship(cocos.sprite.Sprite):
          self.distance = distance
          self.weapon_range = 5
          self.turn_completed = False
+         self.move_completed = False
+         self.attack_completed = False
 
 class Player(object):
     def __init__(self, name):
@@ -41,6 +43,8 @@ class Player(object):
         """Reset the ships turn_completed"""
         for ship in self.fleet:
             ship.turn_completed = False
+            ship.move_completed = False
+            ship.attack_completed = False
 
 class Asteroid(cocos.sprite.Sprite):
     def __init__(self, pos):
