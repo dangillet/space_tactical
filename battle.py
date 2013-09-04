@@ -111,3 +111,75 @@ class Battle(object):
                 self.current_player.reset_ships_turn()
                 self.current_player = next(self.players_turn)
                 self.grid.highlight_player(self.current_player)
+
+class GamePhase(object):
+    def __init__(self, battle, grid):
+        self.battle = battle
+        self.grid = grid
+        
+    def on_enter(self, entity):
+        pass
+    
+    def on_mouse_press(self, i, j, x, y):
+        pass
+    
+    def on_exit(self):
+        pass
+
+class ShipSelected(GamePhase):
+    def __init__(self, battle, grid, entity):
+        super(ShipSelected, self).__init__(battle, grid)
+        self.selected = entity
+        self.actions = []
+        
+    def on_enter(self, entity):
+        self.grid.highlight_ships([self.selected], grid.SHIP_SELECTED)
+        # If ship didn't move yet, calculate and highlight the reachable cells
+        if not self.selected.move_completed:
+            self.actions.append(MoveAction(self))
+        # Get targets in range if ship didn't attack yet
+        if not self.selected.attack_completed:
+            self.actions.append(AttackAction(self))
+        for action in self.actions:
+            action.on_enter(entity)
+    
+    def on_mouse_press(self, i, j, x, y):
+        # If we clicked on our selected ship, deselect it.
+        if self.selected.get_AABB().contains(x, y):
+            self.parent.change_game_phase(ShipDeselected(self.battle))
+        else:
+            for action in self.actions:
+                action.on_mouse_press(i, j, x, y)
+    
+    def on_exit(self):
+        for action in self.actions:
+            action.on_exit()
+        self.grid.highlight_ships([self.selected], grid.PLAYER_TURN)
+
+class MoveAction(GamePhase):
+    def __init__(self, battle, grid):
+        super(MoveAction, self).__init__(battle, grid)
+    
+    def on_enter(self, entity):
+        i, j = self.grid.from_pixel_to_grid(*(entity.position))
+        self.reachable_cells, self.predecessor = self.grid.get_reachable_cells(i, j, entity.distance)
+        self.grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
+    
+    def on_mouse_press(self, i, j, x, y):
+        if (i,j) in self.selected.reachable_cells:
+            self.grid.move_sprite(self.selected, i, j)
+            self.selected.move_completed = True
+    
+class NoSelection(GamePhase):
+    def __init__(self, battle, grid):
+        super(NoSelection, self).__init__(battle, grid)
+
+    def on_mouse_press(self, i, j, x, y):
+        entity = self.grid.get_entity(x, y)
+        if entity is not None and entity.player == self.current_player \
+                and not entity.turn_completed:
+            self.battle.change_game_phase(ShipSelected(self.battle, self.grid, entity))
+
+
+
+
