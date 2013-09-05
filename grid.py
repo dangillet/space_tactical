@@ -145,7 +145,7 @@ class GridLayer(cocos.layer.Layer):
         i0, j0 = self.from_pixel_to_grid(*(sprite.position))
         self.clear_cell(i0, j0)
         # Reconstruct the path
-        path = self.dist_mat.reconstruct_path(i0, j0, i, j, sprite.predecessor)
+        path = self.dist_mat.reconstruct_path(i0, j0, i, j, self.battle.predecessor)
         
         # Initialize the move with an empty action
         move = InstantAction()
@@ -153,15 +153,12 @@ class GridLayer(cocos.layer.Layer):
         for m, n in path:
             move = move + MoveTo(self.from_grid_to_pixel(m, n), 0.3)
         # And after the move, reset the selected ship
-        deselect_action = CallFunc(self.battle.deselect_ship)
-        select_action = CallFuncS(self.battle.select_ship)
-        move = move + deselect_action + select_action
-        sprite.move_action = sprite.do(move)
+        end_of_move = CallFunc(self.battle.game_phase.on_move_finished)
+        move = move + end_of_move
+        sprite.do(move)
         # Update the position in entities['ships']
         self.entities['ships'].remove( (i0, j0) )
         self.entities['ships'].append( (i, j) )
-        self.delete_reachable_cells(sprite)
-        self.highlight_cell(i, j, SHIP_SELECTED)
         
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"
@@ -281,9 +278,9 @@ class GridLayer(cocos.layer.Layer):
         self.highlight_ships(ships, CLEAR_CELL)
             
     def on_key_press(self, symbol, modifiers):
-        # Nothing to do for the moment
+        # With Space bar, end of turn
         if symbol == pyglet.window.key.SPACE:
-            self.battle.end_turn()
+            self.battle.game_phase.on_end_of_turn()
 
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""

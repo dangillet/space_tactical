@@ -16,6 +16,7 @@ class Ship(cocos.sprite.Sprite):
          self.move_completed = False
          self.attack_completed = False
 
+
 class Player(object):
     def __init__(self, name):
         """Initialize the Player
