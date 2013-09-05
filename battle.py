@@ -2,19 +2,20 @@ import random
 from itertools import cycle
 
 from cocos.actions import CallFunc, CallFuncS
-
 import grid, entity
 
 class Battle(object):
     def __init__(self):
         self.players = []
+        ships_factory = entity.ShipFactory()
+        ships_type = ships_factory.get_ships_type()
         #How many players?
         for i in range(4):
             player = entity.Player("Player %d" % i)
             self.players.append(player)
             # How many ships ?
             for _ in range(2):
-                ship = entity.Ship("ship.png", distance=random.randint(2,6) +0.5)
+                ship = ships_factory.create_ship(random.choice(ships_type))
                 ship.scale = float(grid.CELL_WIDTH) / ship.width
                 player.add_ship(ship)
         self.grid = grid.GridLayer(self)
@@ -61,7 +62,7 @@ class Battle(object):
     def show_reachable_cells(self):
         "calculate and highlight the reachable cells"
         i, j = self.grid.from_pixel_to_grid(*(self.selected.position))
-        self.reachable_cells, self.predecessor = self.grid.get_reachable_cells(i, j, self.selected.distance)
+        self.reachable_cells, self.predecessor = self.grid.get_reachable_cells(i, j, self.selected.speed)
         self.grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
     
     def show_targets(self):
@@ -105,7 +106,11 @@ class Battle(object):
                 self.grid.highlight_player(self.current_player)
     
     def attack_ship(self, attacker, defender):
-        print "%s attacks %s" % (attacker, defender)
+        print """------
+ATTACK
+------
+[%s]%s is attacking
+[%s] %s""" % (attacker.player.name, attacker, defender.player.name, defender)
     
     def move_ship(self, ship, i, j):
         self.grid.move_sprite(ship, i, j)

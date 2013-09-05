@@ -186,12 +186,12 @@ class GridLayer(cocos.layer.Layer):
                 return False
         return True
         
-    def get_reachable_cells(self, i, j, distance):
+    def get_reachable_cells(self, i, j, speed):
         """
         Forward this to the distance matrix. Remove any other ships from
         reachable cells so we can move through ships but not stop on another one.
         """
-        r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, distance)
+        r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, speed)
         r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
         return r_cells, predecessor
     
@@ -232,7 +232,7 @@ class GridLayer(cocos.layer.Layer):
             # Do not look for the sprite_batch which contains only obstacles
             if isinstance(child, cocos.batch.BatchNode): continue
             if child.player != current_player \
-            and self.distance(ship, child) <= ship.weapon_range \
+            and self.distance(ship, child) <= ship.weapon.range \
             and self.clear_los(ship, child):
                 targets.append(child)
         return targets
@@ -384,12 +384,12 @@ class DistanceMatrix(object):
         "See _from_cell_number_to_coord. Does the opposite"
         return i + j * self.col
     
-    def get_reachable_cells(self, i, j, distance):
+    def get_reachable_cells(self, i, j, speed):
         "Returns all the cells reachable from (i, j) and the predecessor matrix"
         origin = self.from_coord_to_cell_number(i, j)
         dist, predecessor = dijkstra(self.dist_mat, indices=origin, return_predecessors=True)
         # Only take those where dist is reachable
-        dist = np.argwhere(dist <= distance).flatten()
+        dist = np.argwhere(dist <= speed).flatten()
         # And convert it to a list of grid coordinates
         dist = map(self.from_cell_number_to_coord, dist)
         return dist, predecessor

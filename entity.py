@@ -1,22 +1,65 @@
+
+import simplejson as json
 import cocos
 
+class Weapon(object):
+    #Damage Type
+    URANIUM = 0
+    PLASMA = 1
+    SONIC = 2
+    WARP = 3
+    w_names=["URANIUM", "PLASMA", "SONIC", "WARP"]
+    
+    def __init__( self, weapon_type, weapon_range, precision, temp,
+                  reliability, dmg_type, dmg):
+        self.ship = None
+        self.weapon_type = weapon_type
+        self.range = weapon_range
+        self.precision = precision
+        self.temperature = temp
+        self.reliability = reliability
+        self.damage_type = dmg_type
+        self.damage = dmg
+    def __repr__(self):
+        return "%s: Energy type: %s (dmg:%d, range:%d, precision:%0.2f, temperature:%d, reliability:%0.2f)\n" % \
+            (self.weapon_type, self.w_names[self.damage_type], self.damage, 
+             self.range, self.precision, self.temperature, self.reliability)
+        
 class Ship(cocos.sprite.Sprite):
-    def __init__( self, image, player=None, distance= 5):
-         """Initialize the Ship
+    def __init__( self, image, ship_type="Fighter", speed= 5, hull= 10,
+                shield=2, weapon=None):
+        """
+            Initialize the Ship
             player: Player
-                The player controlling this ship
+            The player controlling this ship
             sprite: cocos.sprite.Sprite
-                The sprite representing this ship
-         """
-         super(Ship, self).__init__(image)
-         self.player = player
-         self.distance = distance
-         self.weapon_range = 5
-         self.turn_completed = False
-         self.move_completed = False
-         self.attack_completed = False
-
-
+            The sprite representing this ship
+        """
+        super(Ship, self).__init__(image)
+        self.player = None
+        self.ship_type = ship_type
+        self.speed = speed
+        self.hull = hull
+        self.shield = shield
+        self.add_weapon(weapon)
+        
+        self.turn_completed = False
+        self.move_completed = False
+        self.attack_completed = False
+    
+    def __repr__(self):
+        s =  "** %s (speed:%d, hull:%d, shield:%d)\n" % (self.ship_type, self.speed, self.hull, self.shield)
+        s += """
+    Weapon:
+    ------
+    %s""" % (self.weapon)
+        return s
+    
+    def add_weapon(self, weapon):
+        "Add a weapon to the ship"
+        self.weapon = weapon
+        self.weapon.ship = self
+    
 class Player(object):
     def __init__(self, name):
         """Initialize the Player
@@ -50,3 +93,55 @@ class Player(object):
 class Asteroid(cocos.sprite.Sprite):
     def __init__(self, pos):
          super(Asteroid, self).__init__("asteroid.png", position=pos)
+
+class ShipFactory(object):
+    def __init__(self):
+        self.load_ship_types()
+
+    def load_ship_types(self):
+        "Loads the definition of the ship types"
+        with open("ships_catalog.json") as f:
+            self.ships = {}
+            self.weapons = {}
+            data = json.load(f)
+            for v in data['weapons']:
+                self.weapons[v['weapon_type']] = \
+                    (v['weapon_type'],
+                     v['range'],
+                     v['precision'],
+                     v['temperature'],
+                     v['reliability'],
+                     Weapon.w_names.index(v['damage_type']),
+                     v['damage'],
+                    )
+                            
+            for v in data['ships']:
+                self.ships[v['ship_type']] = \
+                    (v['image'],
+                     v['ship_type'],
+                     v['speed'],
+                     v['hull'],
+                     v['shield'],
+                     self.weapons[v['weapon']]
+                    )
+    
+    def create_ship(self, ship_type):
+        "Create a new ship of type ship_type"
+        # The 5th element in the ship definition is the weapon
+        weapon_args = self.ships[ship_type][5]
+        weapon = Weapon(*weapon_args)
+        # Take all args except the last, and replace it with the constructed weapon
+        return Ship(*self.ships[ship_type][:-1], weapon=weapon)
+    
+    def get_ships_type(self):
+        return [ship_type for ship_type in self.ships.iterkeys()]
+    
+if __name__ == '__main__':
+    
+    from cocos.director import director
+    director.init(width = 1600, height=900)
+    
+    ships_factory = ShipFactory()
+
+    for ship_type in ships_factory.ships.iterkeys():
+        print ships_factory.create_ship(ship_type)
