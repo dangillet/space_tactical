@@ -13,7 +13,6 @@ from pyglet.gl import *
 import entity, simplexnoise, library
 
 CELL_WIDTH = 50
-ROW, COL = 18, 30
 
 PLAYER_TURN = [128, 128, 0, 100]
 SHIP_SELECTED = [250, 250, 0, 100]
@@ -22,7 +21,7 @@ TARGET = [255, 0, 0, 100]
 CLEAR_CELL = [0, 0, 0, 0]
 
 class GridLayer(cocos.layer.Layer):
-    def __init__(self, battle):
+    def __init__(self, battle, map_kwargs):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
         # Batch for the grid
@@ -30,33 +29,29 @@ class GridLayer(cocos.layer.Layer):
         # Batch for the asteroids
         self.sprite_batch = cocos.batch.BatchNode()
         self.add(self.sprite_batch)
-        
+        self.col, self.row = map_kwargs['col'], map_kwargs['row']
         # Keep a reference to the battle object
         self.battle = battle
         
         # Grid squares and borders
-        self.squares = [[None for _ in range(ROW)] for _ in range(COL)]
+        self.squares = [[None for _ in range(self.row)] for _ in range(self.col)]
         self.borders = []
         
         self.entities = {'asteroids' : [], 'ships': []}
         
         # Obstacle on map
-        # self.entities['asteroids']=[(3,4), (5,6), (3,5), (3,6), (4,6), (4,7), (4,8)]
-        # Add some random obstacles
-        #from itertools import product
-        #coord_gen = product(xrange(COL-1), xrange(ROW-1))
-        #coords = list(coord_gen)
-        # How many walls? They will all be different. So not bigger than grid size!
-        # This is a bit slow on start, but won't be part of the game, so who cares?
-        #shuffle(coords)
-        OCTAVE, PERSISTENCE, FREQ = 1, 0.1, 0.3
-        SPARSITY = 175
-        noise = np.zeros(shape=(COL, ROW))
-        for x, y in np.ndindex(COL, ROW):
-            v = simplexnoise.scaled_octave_noise_2d(OCTAVE, PERSISTENCE, FREQ, 0, 255, x, y)
-            c = v - SPARSITY
+        noise = np.zeros(shape=(self.col, self.row))
+        for x, y in np.ndindex(self.col, self.row):
+            v = simplexnoise.scaled_octave_noise_2d(
+                map_kwargs['octave'],
+                map_kwargs['persistance'],
+                map_kwargs['freq'],
+                0, 255,
+                x + map_kwargs['x_off'],
+                y + map_kwargs['y_off'])
+            c = v - map_kwargs['sparsity']
             if c<0: c = 0
-            noise[x][y] = 255 - (math.pow(0.1, c) * 255)
+            noise[x][y] = 255 - (math.pow(map_kwargs['density'], c) * 255)
         self.entities['asteroids']= zip(*np.where(noise> 0.))
 
         
@@ -65,8 +60,8 @@ class GridLayer(cocos.layer.Layer):
         self.bg_texture = pyglet.image.TileableTexture.create_for_image(img)
 
         # We construct the quads and store them for future reference
-        for row in range(ROW):
-            for col in range(COL):
+        for row in range(self.row):
+            for col in range(self.col):
                 self.squares[col][row] = self.grid_batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(1),
                             ('v2f', (col*CELL_WIDTH, row*CELL_WIDTH, col*CELL_WIDTH, (row+1)*CELL_WIDTH,
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
@@ -81,23 +76,23 @@ class GridLayer(cocos.layer.Layer):
         # We build the lines of the grid.
         lines=[]
         # The horizontal lines first
-        for row in range(ROW+1):
-            lines.extend((0., row*CELL_WIDTH, COL*CELL_WIDTH, row*CELL_WIDTH))
-        self.borders.append(self.grid_batch.add((ROW+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
+        for row in range(self.row+1):
+            lines.extend((0., row*CELL_WIDTH, self.col*CELL_WIDTH, row*CELL_WIDTH))
+        self.borders.append(self.grid_batch.add((self.row+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
-                    ('c4B', (255, 0, 0, 100) * (ROW+1)*2))
+                    ('c4B', (255, 0, 0, 100) * (self.row+1)*2))
                     )
         # And the vertical lines
         lines=[]
-        for col in range(COL+1):
-            lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, ROW*CELL_WIDTH))
-        self.borders.append(self.grid_batch.add((COL+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
+        for col in range(self.col+1):
+            lines.extend((col*CELL_WIDTH, 0., col*CELL_WIDTH, self.row*CELL_WIDTH))
+        self.borders.append(self.grid_batch.add((self.col+1)*2, GL_LINES, pyglet.graphics.OrderedGroup(2),
                     ('v2f', lines),
-                    ('c4B', (255, 0, 0, 100) * (COL+1)*2))
+                    ('c4B', (255, 0, 0, 100) * (self.col+1)*2))
                     )
         
         # We build the distance matrix.
-        self.dist_mat = DistanceMatrix(ROW, COL)
+        self.dist_mat = DistanceMatrix(self.row, self.col)
         for asteroid in self.entities['asteroids']:
             self.dist_mat.add_obstacle(*asteroid)
         
@@ -109,7 +104,7 @@ class GridLayer(cocos.layer.Layer):
         glPushMatrix()
         self.transform()
         # Draw the background as a tileable texture over the grid.
-        grid_width, grid_height = COL*CELL_WIDTH, ROW*CELL_WIDTH
+        grid_width, grid_height = self.col*CELL_WIDTH, self.row*CELL_WIDTH
         self.bg_texture.blit_tiled(0, 0, 0, grid_width, grid_height)
         # Draw the rest
         self.grid_batch.draw()
@@ -126,12 +121,12 @@ class GridLayer(cocos.layer.Layer):
     
     def _is_invalid_grid(self, i, j):
         "Check if grid coords are in the grid"
-        return i < 0 or j < 0 or not i < COL or not j < ROW
+        return i < 0 or j < 0 or not i < self.col or not j < self.row
         
     def clear_grid(self):
         "Removes highlights from the grid"
-        for row in range(ROW):
-            for col in range(COL):
+        for row in range(self.row):
+            for col in range(self.col):
                 if (col,row) not in self.entities['asteroids']:
                     self.squares[col][row].colors = [128, 128, 128, 0] * 4
                 else:
@@ -198,20 +193,20 @@ class GridLayer(cocos.layer.Layer):
     def get_random_free_cells(self, side):
         "Returns a generator giving cells without obstacle in an area close to a border"
         if side == 0:
-            left, right, top, bottom = 0, 3, ROW*2/3, ROW/3
+            left, right, top, bottom = 0, 3, self.row*2/3, self.row/3
         elif side == 1:
-            left, right, top, bottom = COL-3, COL-1, ROW*2/3, ROW/3
+            left, right, top, bottom = self.col-3, self.col-1, self.row*2/3, self.row/3
         elif side == 2:
-            left, right, top, bottom = COL/3, COL*2/3, ROW-1, ROW-3
+            left, right, top, bottom = self.col/3, self.col*2/3, self.row-1, self.row-3
         else:
-            left, right, top, bottom = COL/3, COL*2/3, 3, 0
+            left, right, top, bottom = self.col/3, self.col*2/3, 3, 0
         coords = [(x, y) for x in range(left, right) for y in range(bottom, top) if (x, y) not in self.entities['asteroids']]
         shuffle(coords)
         return coords
 
-        i, j = randint(0, COL-1), randint (0, ROW-1)
+        i, j = randint(0, self.col-1), randint (0, self.row-1)
         while (i,j) in self.entities['asteroids']:
-            i, j = randint(0, COL-1), randint (0, ROW-1)
+            i, j = randint(0, self.col-1), randint (0, self.row-1)
         return (i,j)
 
     def get_entity(self, x, y):

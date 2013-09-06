@@ -1,5 +1,6 @@
 import random
 from itertools import cycle
+import simplejson as json
 
 from cocos.actions import CallFunc, CallFuncS
 import grid, entity
@@ -7,19 +8,10 @@ import grid, entity
 class Battle(object):
     def __init__(self):
         self.players = []
-        ships_factory = entity.ShipFactory()
-        ships_type = ships_factory.get_ships_type()
-        #How many players?
-        for i in range(4):
-            player = entity.Player("Player %d" % i)
-            self.players.append(player)
-            # How many ships ?
-            for _ in range(2):
-                ship = ships_factory.create_ship(random.choice(ships_type))
-                ship.scale = float(grid.CELL_WIDTH) / ship.width
-                player.add_ship(ship)
-        self.grid = grid.GridLayer(self)
-        
+        self.ships_factory = entity.ShipFactory()
+        self.ships_type = self.ships_factory.get_ships_type()
+        self.load_battlemap()
+
         # Player list
         self.players_turn = cycle(self.players)
         # Add the ships to the grid
@@ -34,6 +26,19 @@ class Battle(object):
         self.selected, self.targets = None, None
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
+    
+    def load_battlemap(self):
+        with open("battlemap.json") as f:
+            data = json.load(f)
+            for player_data in data['players']:
+                player = entity.Player(player_data['name'])
+                self.players.append(player)
+                for ship_type, quantity in player_data['fleet'].iteritems():
+                    for _ in range(quantity):
+                        ship = self.ships_factory.create_ship(ship_type)
+                        ship.scale = float(grid.CELL_WIDTH) / ship.width
+                        player.add_ship(ship)
+            self.grid = grid.GridLayer(self, data['battlemap'])
     
     def change_game_phase(self, game_phase):
         "Change the state of the game."
