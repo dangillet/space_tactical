@@ -6,7 +6,7 @@ from scipy.sparse.csgraph import dijkstra
 
 import cocos
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, CallFunc, CallFuncS
+from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, CallFunc, CallFuncS
 import pyglet
 from pyglet.gl import *
 
@@ -132,6 +132,14 @@ class GridLayer(cocos.layer.Layer):
                 else:
                     self.squares[col][row].colors = [0, 0, 128, 150] * 4
     
+    def rotate_to_bearing(self, m, n ,ox, oy):
+        "Returns a RotateTo action from (ox, oy) towards (m, n)"
+        # Compute the angle to the next grid.
+        angle = math.degrees(math.atan2(n - oy, m - ox))
+        # Bearing with 0 for N, 90 for E, 180 for S and 270 for W
+        bearing = (90 - angle) % 360
+        return RotateTo(bearing, 0.1)
+    
     def move_sprite(self, sprite, i, j):
         "Move sprite to the selected grid location"
         if self._is_invalid_grid(i,j):
@@ -145,8 +153,14 @@ class GridLayer(cocos.layer.Layer):
         # Initialize the move with an empty action
         move = InstantAction()
         # Sequence moves to the next grid
+        ox, oy = i0, j0
         for m, n in path:
-            move = move + MoveTo(self.from_grid_to_pixel(m, n), 0.3)
+            
+            move = ( move + 
+                     self.rotate_to_bearing(m, n, ox, oy) +
+                     MoveTo(self.from_grid_to_pixel(m, n), 0.3)
+                    )
+            ox, oy = m, n
         # And after the move, reset the selected ship
         end_of_move = CallFunc(self.battle.game_phase.on_move_finished)
         move = move + end_of_move
@@ -192,12 +206,16 @@ class GridLayer(cocos.layer.Layer):
     
     def get_random_free_cells(self, side):
         "Returns a generator giving cells without obstacle in an area close to a border"
+        # Left
         if side == 0:
             left, right, top, bottom = 0, 3, self.row*2/3, self.row/3
+        # Right
         elif side == 1:
             left, right, top, bottom = self.col-3, self.col-1, self.row*2/3, self.row/3
+        # Top
         elif side == 2:
             left, right, top, bottom = self.col/3, self.col*2/3, self.row-1, self.row-3
+        # Bottom
         else:
             left, right, top, bottom = self.col/3, self.col*2/3, 3, 0
         coords = [(x, y) for x in range(left, right) for y in range(bottom, top) if (x, y) not in self.entities['asteroids']]
@@ -280,11 +298,13 @@ class GridLayer(cocos.layer.Layer):
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""
         starting_cells = self.get_random_free_cells(side)
+        orientation = [90, -90, 180, 0]
         for a, ship in enumerate(player.fleet):
             i, j = starting_cells[a]
             self.entities['ships'].append((i, j))
             x, y = self.from_grid_to_pixel(i,j)
             ship.position = (x, y)
+            ship.rotation = orientation[side]
             self.add(ship)
 
 class DistanceMatrix(object):

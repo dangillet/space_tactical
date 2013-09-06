@@ -111,6 +111,9 @@ class Battle(object):
                 self.grid.highlight_player(self.current_player)
     
     def attack_ship(self, attacker, defender):
+        ox, oy = self.grid.from_pixel_to_grid(*(attacker.position))
+        m, n = self.grid.from_pixel_to_grid(*(defender.position))
+        attacker.do(self.grid.rotate_to_bearing(m, n, ox, oy))
         print """------
 ATTACK
 ------
@@ -166,14 +169,16 @@ class ShipSelected(GamePhase):
         # If we clicked on our selected ship, deselect it.
         if self.battle.selected.get_AABB().contains(x, y):
             self.battle.change_game_phase(Idle(self.battle))
+        # If we clicked on a reachable cell, move the ship there
+        elif self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
+            self.battle.change_game_phase(Move(self.battle, i, j))
         # If we clicked on a target, attack it.
         elif self.battle.targets:
             for ship in self.battle.targets:
                 if ship.get_AABB().contains(x, y):
                     self.battle.change_game_phase(Attack(self.battle, ship))
-        # If we clicked on a reachable cell, move the ship there
-        elif self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
-            self.battle.change_game_phase(Move(self.battle, i, j))
+        
+
     
     def on_end_of_turn(self):
         "End the turn of the current ship. If all ships played, change player"
