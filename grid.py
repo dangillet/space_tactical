@@ -293,11 +293,10 @@ class GridLayer(cocos.layer.ScrollableLayer):
         return targets
 
     def on_mouse_press(self, x, y, button, modifiers):
-        # Get the virtual coords, in case window was resized.
+        # Get the coords from the scrolling manager.
         x, y = self.scroller.pixel_from_screen(x,y)
-        #x, y = director.get_virtual_coordinates(x, y)
         # Transform mouse pos in local coord
-        # x, y = self.point_to_local((x,y))
+        x, y = self.scroller.point_to_local((x,y))
         i, j = self.from_pixel_to_grid(x, y)
         if i is None or j is None: return
         self.battle.on_mouse_press(i, j, x, y)
