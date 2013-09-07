@@ -1,7 +1,7 @@
 {
   "battlemap": 
   {
-    "col": 20, "row":13,
+    "col": 30, "row":23,
     "octave": 1, "persistance": 0.1, "freq": 0.3, "sparsity": 175, "x_off": 0, "y_off": 0, "density": 0.1
   },
   "players":

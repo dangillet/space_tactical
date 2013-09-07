@@ -5,9 +5,12 @@ from scipy.sparse import lil_matrix
 from scipy.sparse.csgraph import dijkstra
 
 import cocos
+import cocos.euclid as eu
 from cocos.director import director
 from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, CallFunc, CallFuncS
+
 import pyglet
+from pyglet.window import key
 from pyglet.gl import *
 
 import entity, simplexnoise, library
@@ -20,7 +23,7 @@ REACHABLE_CELLS = [128, 0, 128, 100]
 TARGET = [255, 0, 0, 100]
 CLEAR_CELL = [0, 0, 0, 0]
 
-class GridLayer(cocos.layer.Layer):
+class GridLayer(cocos.layer.ScrollableLayer):
     def __init__(self, battle, map_kwargs):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
@@ -29,7 +32,11 @@ class GridLayer(cocos.layer.Layer):
         # Batch for the asteroids
         self.sprite_batch = cocos.batch.BatchNode()
         self.add(self.sprite_batch)
+        
         self.col, self.row = map_kwargs['col'], map_kwargs['row']
+        self.px_width = (self.col+2) * CELL_WIDTH
+        self.px_height = (self.row+2) * CELL_WIDTH
+
         # Keep a reference to the battle object
         self.battle = battle
         
@@ -96,9 +103,30 @@ class GridLayer(cocos.layer.Layer):
         for asteroid in self.entities['asteroids']:
             self.dist_mat.add_obstacle(*asteroid)
         
-        # Move a bit the grid, so it doesn't stay stucked at the bottom left of the screen
-        self.anchor = (50,50)
-        self.position = (50,50)
+        self.bindings = { #key constant : button name
+            key.LEFT:'left',
+            key.RIGHT:'right',
+            key.UP:'up',
+            key.DOWN:'down',
+            key.PLUS:'zoomin',
+            key.MINUS:'zoomout'
+            }
+        self.buttons = { #button name : current value, 0 not pressed, 1 pressed
+            'left':0,
+            'right':0,
+            'up':0,
+            'down':0,
+            'zoomin':0,
+            'zoomout':0
+            }
+        self.schedule(self.step)
+        
+    def on_enter(self):
+        super(GridLayer,self).on_enter()
+        self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
+        self.scroller.fastness = 300
+        w, h = director.get_window_size()
+        self.focus_position = eu.Point2(w/2, h/2)
     
     def draw(self, *args, **kwargs):
         glPushMatrix()
@@ -109,6 +137,20 @@ class GridLayer(cocos.layer.Layer):
         # Draw the rest
         self.grid_batch.draw()
         glPopMatrix()
+    
+    def step(self, dt):
+        buttons = self.buttons
+        move_dir = eu.Vector2(buttons['right']-buttons['left'],
+                              buttons['up']-buttons['down'])
+        changed = False
+        if move_dir:
+            new_pos = self.focus_position + self.scroller.fastness*dt*move_dir.normalize()
+            new_pos = self.clamp(new_pos)
+            self.focus_position = new_pos
+            changed = True
+        
+        if changed:
+            self.update_focus()
     
     def from_pixel_to_grid(self, x, y):
         "Compute the cell coords from pixel coords"
@@ -252,9 +294,10 @@ class GridLayer(cocos.layer.Layer):
 
     def on_mouse_press(self, x, y, button, modifiers):
         # Get the virtual coords, in case window was resized.
-        x, y = director.get_virtual_coordinates(x, y)
+        x, y = self.scroller.pixel_from_screen(x,y)
+        #x, y = director.get_virtual_coordinates(x, y)
         # Transform mouse pos in local coord
-        x, y = self.point_to_local((x,y))
+        # x, y = self.point_to_local((x,y))
         i, j = self.from_pixel_to_grid(x, y)
         if i is None or j is None: return
         self.battle.on_mouse_press(i, j, x, y)
@@ -292,9 +335,33 @@ class GridLayer(cocos.layer.Layer):
             
     def on_key_press(self, symbol, modifiers):
         # With Space bar, end of turn
-        if symbol == pyglet.window.key.SPACE:
+        if symbol == key.SPACE:
             self.battle.game_phase.on_end_of_turn()
+            return True
+        
+        binds = self.bindings
+        if symbol in binds:
+            self.buttons[binds[symbol]] = 1
+            return True
+        return False
 
+    def on_key_release(self, symbol, modifiers ):
+            binds = self.bindings
+            if symbol in binds:
+                self.buttons[binds[symbol]] = 0
+                return True
+            return False
+
+    def update_focus(self):
+        self.scroller.set_focus(*self.focus_position)
+        
+    def clamp(self, position):
+        "Clamp the position within world boundary"
+        min_x, min_y = eu.Vector2(*director.get_window_size()) /2
+        max_x, max_y = self.px_width - min_x, self.px_height - min_y
+        x, y = position
+        return eu.Vector2( max(min(x, max_x), min_x), max(min(y, max_y), min_y) )
+    
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""
         starting_cells = self.get_random_free_cells(side)
