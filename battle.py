@@ -1,6 +1,6 @@
 import random
 from itertools import cycle
-import simplejson as json
+import json
 
 from cocos.actions import CallFunc, CallFuncS
 import grid, entity

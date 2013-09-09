@@ -1,5 +1,5 @@
 import random
-import simplejson as json
+import json
 import cocos
 
 class Weapon(object):
@@ -120,7 +120,7 @@ class ShipFactory(object):
                             
             for v in data['ships']:
                 self.ships[v['ship_type']] = \
-                    (v['image'],
+                    (v['image'].encode('utf-8'), # cocos.Sprite needs a str, not a unicode
                      v['ship_type'],
                      v['speed'],
                      v['hull'],
