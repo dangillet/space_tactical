@@ -7,7 +7,7 @@ from scipy.sparse.csgraph import dijkstra
 import cocos
 import cocos.euclid as eu
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, CallFunc, CallFuncS
+from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay, CallFunc, CallFuncS
 
 import pyglet
 from pyglet.window import key
@@ -187,12 +187,15 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     self.squares[col][row].colors = [0, 0, 128, 150] * 4
     
     def rotate_to_bearing(self, m, n ,ox, oy):
-        "Returns a RotateTo action from (ox, oy) towards (m, n)"
+        """
+        Returns a RotateTo action from (ox, oy) towards (m, n).
+        We add some delay in order to synchronize the turns with the movements.
+        """
         # Compute the angle to the next grid.
         angle = math.degrees(math.atan2(n - oy, m - ox))
         # Bearing with 0 for N, 90 for E, 180 for S and 270 for W
         bearing = (90 - angle) % 360
-        return RotateTo(bearing, 0.1)
+        return RotateTo(bearing, 0.1) + Delay(0.2)
     
     def move_sprite(self, sprite, i, j):
         "Move sprite to the selected grid location"
@@ -204,21 +207,25 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Reconstruct the path
         path = self.dist_mat.reconstruct_path(i0, j0, i, j, self.battle.predecessor)
         
-        # Initialize the move with an empty action
-        move = InstantAction()
+        # Initialize the move and rotate with an empty action
+        move = rotate = InstantAction()
         # Sequence moves to the next grid
         ox, oy = i0, j0
         for m, n in path:
-            
+            # We move in 0.3s to the next grid location
             move = ( move + 
-                     self.rotate_to_bearing(m, n, ox, oy) +
                      MoveTo(self.from_grid_to_pixel(m, n), 0.3)
+                    )
+            # We rotate towards the next grid location in 0.1s and wait for 0.2s
+            rotate = ( rotate +
+                       self.rotate_to_bearing(m, n, ox, oy)
                     )
             ox, oy = m, n
         # And after the move, reset the selected ship
         end_of_move = CallFunc(self.battle.game_phase.on_move_finished)
         move = move + end_of_move
         sprite.do(move)
+        sprite.do(rotate)
         # Update the position in entities['ships']
         self.entities['ships'].remove( (i0, j0) )
         self.entities['ships'].append( (i, j) )
