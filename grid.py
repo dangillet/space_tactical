@@ -7,7 +7,7 @@ from scipy.sparse.csgraph import dijkstra
 import cocos
 import cocos.euclid as eu
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay, CallFunc, CallFuncS
+from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay, CallFunc, CallFuncS, ScaleTo
 
 import pyglet
 from pyglet.window import key
@@ -36,8 +36,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Size of the grid
         self.col, self.row = map_kwargs['col'], map_kwargs['row']
         # Max size of the showable area.
-        self.px_width = (self.col+2) * CELL_WIDTH
-        self.px_height = (self.row+2) * CELL_WIDTH
+        self.px_width = (self.col) * CELL_WIDTH
+        self.px_height = (self.row) * CELL_WIDTH
 
         # Keep a reference to the battle object
         self.battle = battle
@@ -116,8 +116,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
             key.RIGHT:'right',
             key.UP:'up',
             key.DOWN:'down',
-            key.PLUS:'zoomin',
-            key.MINUS:'zoomout'
+            key.NUM_ADD:'zoomin',
+            key.NUM_SUBTRACT:'zoomout'
             }
         self.buttons = { #button name : current value, 0 not pressed, 1 pressed
             'left':0,
@@ -135,9 +135,9 @@ class GridLayer(cocos.layer.ScrollableLayer):
         super(GridLayer,self).on_enter()
         self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
         # How fast we can scroll
-        self.scroller.fastness = 500
+        self.scroller.fastness = 700
         w, h = director.get_window_size()
-        self.focus_position = eu.Point2(w/2, h/2)
+        #self.focus_position = eu.Vector2(self.scroller.restricted_fx, self.scroller.restricted_fy)
     
     def draw(self, *args, **kwargs):
         glPushMatrix()
@@ -156,13 +156,12 @@ class GridLayer(cocos.layer.ScrollableLayer):
                               buttons['up']-buttons['down'])
         changed = False
         if move_dir:
-            new_pos = self.focus_position + self.scroller.fastness*dt*move_dir.normalize()
-            new_pos = self.clamp(new_pos)
-            self.focus_position = new_pos
+            new_pos = eu.Vector2(self.scroller.restricted_fx, self.scroller.restricted_fy)
+            new_pos = new_pos + self.scroller.fastness*dt*move_dir.normalize()
             changed = True
         
         if changed:
-            self.update_focus()
+            self.update_focus(new_pos)
     
     def from_pixel_to_grid(self, x, y):
         "Compute the cell coords from pixel coords"
@@ -366,25 +365,25 @@ class GridLayer(cocos.layer.ScrollableLayer):
 
     def on_key_release(self, symbol, modifiers):
         # Check for key released in our key bindings
+        if symbol == key.F1:
+            self.scroller.do(ScaleTo(0.75, 1))
+            return True
+        elif symbol == key.F2:
+            self.scroller.do(ScaleTo(1., 1))
+            return True
+        elif symbol == key.F3:
+            self.scroller.do(ScaleTo(1.25, 1))
+            return True
+        
         binds = self.bindings
         if symbol in binds:
             self.buttons[binds[symbol]] = 0
             return True
         return False
 
-    def update_focus(self):
+    def update_focus(self, position):
         "Move the grid to the focus_position."
-        self.scroller.set_focus(*self.focus_position)
-        
-    def clamp(self, position):
-        "Clamp the position within world boundary"
-        # Lower left boundary is at half width/height of window size
-        min_x, min_y = eu.Vector2(*director.get_window_size()) /2
-        # Upper left boudary is at grid size minus half width/height of window size
-        max_x, max_y = self.px_width - min_x, self.px_height - min_y
-        x, y = position
-        # return the position within the min and max values
-        return eu.Vector2( max(min(x, max_x), min_x), max(min(y, max_y), min_y) )
+        self.scroller.set_focus(*position)
     
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""

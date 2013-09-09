@@ -92,7 +92,7 @@ class Player(object):
 
 class Asteroid(cocos.sprite.Sprite):
     def __init__(self, image, pos):
-         super(Asteroid, self).__init__(image, position=pos)
+         super(Asteroid, self).__init__(image, position=pos,)
          frame_num = len(image.frames)
          self._frame_index = random.randint(0, frame_num-1)
          
