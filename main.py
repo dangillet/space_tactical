@@ -1,6 +1,7 @@
 import cocos
 from cocos.director import director
 import battle
+import grid
 
         
 def main():
@@ -8,8 +9,8 @@ def main():
     my_battle = battle.Battle()
     scroller = cocos.layer.ScrollingManager()
     scroller.add(my_battle.grid)
-    scroller.position = (50,50)
-    scroller.anchor = (50, 50)
+    scroller.position = (grid.CELL_WIDTH,grid.CELL_WIDTH)
+    scroller.anchor = (grid.CELL_WIDTH, grid.CELL_WIDTH)
     main_scene = cocos.scene.Scene(scroller)
     director.show_FPS = True
     director.run (main_scene)

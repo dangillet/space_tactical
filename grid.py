@@ -1,5 +1,5 @@
 import math
-from random import shuffle, randint
+from random import shuffle, randint, uniform
 import numpy as np
 from scipy.sparse import lil_matrix
 from scipy.sparse.csgraph import dijkstra
@@ -33,7 +33,9 @@ class GridLayer(cocos.layer.ScrollableLayer):
         self.sprite_batch = cocos.batch.BatchNode()
         self.add(self.sprite_batch)
         
+        # Size of the grid
         self.col, self.row = map_kwargs['col'], map_kwargs['row']
+        # Max size of the showable area.
         self.px_width = (self.col+2) * CELL_WIDTH
         self.px_height = (self.row+2) * CELL_WIDTH
 
@@ -73,11 +75,16 @@ class GridLayer(cocos.layer.ScrollableLayer):
                             ('v2f', (col*CELL_WIDTH, row*CELL_WIDTH, col*CELL_WIDTH, (row+1)*CELL_WIDTH,
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
                             ('c4B', (128, 128, 128, 0) * 4))
-        # We set a different color for the walls
+        
+        # We build the asteroids
+        raw = pyglet.image.load('aster3.png')
+        raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
+        texture_seq = pyglet.image.TextureGrid(raw_seq)
+
         for x,y in self.entities['asteroids']:
-            #self.squares[x][y].colors = [0, 0, 128, 150] * 4
-            asteroid = entity.Asteroid(self.from_grid_to_pixel(x,y))
-            asteroid.do(Repeat(RotateBy(randint(-60, 60), 1)))
+            rotation_speed = uniform(0.07, 0.15)
+            anim = pyglet.image.Animation.from_image_sequence(texture_seq, rotation_speed, True)
+            asteroid = entity.Asteroid(anim, self.from_grid_to_pixel(x,y))
             self.sprite_batch.add(asteroid)
 
         # We build the lines of the grid.
@@ -103,6 +110,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         for asteroid in self.entities['asteroids']:
             self.dist_mat.add_obstacle(*asteroid)
         
+        # We store key state
         self.bindings = { #key constant : button name
             key.LEFT:'left',
             key.RIGHT:'right',
@@ -119,12 +127,15 @@ class GridLayer(cocos.layer.ScrollableLayer):
             'zoomin':0,
             'zoomout':0
             }
+        # We want to call step every frame to scroll the map
         self.schedule(self.step)
         
     def on_enter(self):
+        "Called when the grid is displayed for the first time"
         super(GridLayer,self).on_enter()
         self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
-        self.scroller.fastness = 300
+        # How fast we can scroll
+        self.scroller.fastness = 500
         w, h = director.get_window_size()
         self.focus_position = eu.Point2(w/2, h/2)
     
@@ -139,6 +150,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         glPopMatrix()
     
     def step(self, dt):
+        "Called every frame to check if buttons were pressed and move the map."
         buttons = self.buttons
         move_dir = eu.Vector2(buttons['right']-buttons['left'],
                               buttons['up']-buttons['down'])
@@ -338,27 +350,33 @@ class GridLayer(cocos.layer.ScrollableLayer):
             self.battle.game_phase.on_end_of_turn()
             return True
         
+        # Check for key pressed in our key bindings
         binds = self.bindings
         if symbol in binds:
             self.buttons[binds[symbol]] = 1
             return True
         return False
 
-    def on_key_release(self, symbol, modifiers ):
-            binds = self.bindings
-            if symbol in binds:
-                self.buttons[binds[symbol]] = 0
-                return True
-            return False
+    def on_key_release(self, symbol, modifiers):
+        # Check for key released in our key bindings
+        binds = self.bindings
+        if symbol in binds:
+            self.buttons[binds[symbol]] = 0
+            return True
+        return False
 
     def update_focus(self):
+        "Move the grid to the focus_position."
         self.scroller.set_focus(*self.focus_position)
         
     def clamp(self, position):
         "Clamp the position within world boundary"
+        # Lower left boundary is at half width/height of window size
         min_x, min_y = eu.Vector2(*director.get_window_size()) /2
+        # Upper left boudary is at grid size minus half width/height of window size
         max_x, max_y = self.px_width - min_x, self.px_height - min_y
         x, y = position
+        # return the position within the min and max values
         return eu.Vector2( max(min(x, max_x), min_x), max(min(y, max_y), min_y) )
     
     def add_player_fleet(self, player, side):
