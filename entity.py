@@ -91,8 +91,8 @@ class Player(object):
             ship.attack_completed = False
 
 class Asteroid(cocos.sprite.Sprite):
-    def __init__(self, image, pos):
-         super(Asteroid, self).__init__(image, position=pos,)
+    def __init__(self, image, *args, **kwargs):
+         super(Asteroid, self).__init__(image, *args, **kwargs)
          frame_num = len(image.frames)
          self._frame_index = random.randint(0, frame_num-1)
          

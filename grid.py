@@ -7,7 +7,9 @@ from scipy.sparse.csgraph import dijkstra
 import cocos
 import cocos.euclid as eu
 from cocos.director import director
-from cocos.actions import MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay, CallFunc, CallFuncS, ScaleTo
+from cocos.actions import (
+    MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay,
+    CallFunc, CallFuncS, ScaleTo, AccelDeccel)
 
 import pyglet
 from pyglet.window import key
@@ -84,7 +86,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         for x,y in self.entities['asteroids']:
             rotation_speed = uniform(0.07, 0.15)
             anim = pyglet.image.Animation.from_image_sequence(texture_seq, rotation_speed, True)
-            asteroid = entity.Asteroid(anim, self.from_grid_to_pixel(x,y))
+            asteroid = entity.Asteroid(anim, position = self.from_grid_to_pixel(x,y), rotation = uniform(0, 360))
             self.sprite_batch.add(asteroid)
 
         # We build the lines of the grid.
@@ -104,6 +106,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     ('v2f', lines),
                     ('c4B', (255, 0, 0, 100) * (self.col+1)*2))
                     )
+        self.grid_visible = True
         
         # We build the distance matrix.
         self.dist_mat = DistanceMatrix(self.row, self.col)
@@ -366,14 +369,16 @@ class GridLayer(cocos.layer.ScrollableLayer):
     def on_key_release(self, symbol, modifiers):
         # Check for key released in our key bindings
         if symbol == key.F1:
-            self.scroller.do(ScaleTo(0.75, 1))
+            self.scroller.do(AccelDeccel(ScaleTo(0.75, 1)))
             return True
         elif symbol == key.F2:
-            self.scroller.do(ScaleTo(1., 1))
+            self.scroller.do(AccelDeccel(ScaleTo(1., 1)))
             return True
         elif symbol == key.F3:
-            self.scroller.do(ScaleTo(1.25, 1))
+            self.scroller.do(AccelDeccel(ScaleTo(1.25, 1)))
             return True
+        elif symbol == key.G:
+            self.toggle_grid_lines()
         
         binds = self.bindings
         if symbol in binds:
@@ -381,6 +386,18 @@ class GridLayer(cocos.layer.ScrollableLayer):
             return True
         return False
 
+    def toggle_grid_lines(self):
+        if self.grid_visible:
+            color = [255, 0, 0, 0]
+        else:
+            color = [255, 0, 0, 100]
+        
+        self.borders[0].colors = color * (self.row+1)*2
+        self.borders[1].colors = color * (self.col+1)*2
+            
+        self.grid_visible = not self.grid_visible
+            
+    
     def update_focus(self, position):
         "Move the grid to the focus_position."
         self.scroller.set_focus(*position)
