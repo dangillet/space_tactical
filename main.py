@@ -3,7 +3,7 @@ from cocos.director import director
 
 import pyglet
 
-import battle, hud
+import battle, gui
 
 SCREEN_W, SCREEN_H = 1600, 900
 
