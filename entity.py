@@ -21,9 +21,15 @@ class Weapon(object):
         self.damage_type = dmg_type
         self.damage = dmg
     def __repr__(self):
-        return "%s: Energy type: %s (dmg:%d, range:%d, precision:%0.2f, temperature:%d, reliability:%0.2f)\n" % \
-            (self.weapon_type, self.w_names[self.damage_type], self.damage, 
-             self.range, self.precision, self.temperature, self.reliability)
+        return """
+{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
+Energy type: %s {}
+{.tab_stops [120]}
+damage: %d{#x09}range: %d {}
+precision: %d%%{#x09}temperature: %d {}
+reliability: %0.2f
+""" % (self.weapon_type, self.w_names[self.damage_type], self.damage, 
+             self.range, self.precision*100, self.temperature, self.reliability)
         
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type="Fighter", speed= 5, hull= 10,
@@ -48,11 +54,13 @@ class Ship(cocos.sprite.Sprite):
         self.attack_completed = False
     
     def __repr__(self):
-        s =  "** %s (speed:%d, hull:%d, shield:%d)\n" % (self.ship_type, self.speed, self.hull, self.shield)
+        s =  """
+{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
+{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %d
+""" % (self.ship_type, self.speed, self.hull, self.shield)
         s += """
-    Weapon:
-    ------
-    %s""" % (self.weapon)
+{underline [255, 255, 255, 255]}Weapon{underline None}: {}
+%s""" % (self.weapon)
         return s
     
     def add_weapon(self, weapon):

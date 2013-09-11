@@ -15,7 +15,7 @@ import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
-import entity, simplexnoise, library
+import entity, simplexnoise, library, battle
 
 CELL_WIDTH = 50
 
@@ -26,7 +26,7 @@ TARGET = [255, 0, 0, 100]
 CLEAR_CELL = [0, 0, 0, 0]
 
 class GridLayer(cocos.layer.ScrollableLayer):
-    def __init__(self, battle, map_kwargs):
+    def __init__(self, map_kwargs):
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
         # Batch for the grid
@@ -40,9 +40,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Max size of the showable area.
         self.px_width = (self.col) * CELL_WIDTH
         self.px_height = (self.row) * CELL_WIDTH
-
-        # Keep a reference to the battle object
-        self.battle = battle
         
         # Grid squares and borders
         self.squares = [[None for _ in range(self.row)] for _ in range(self.col)]
@@ -136,6 +133,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
     def on_enter(self):
         "Called when the grid is displayed for the first time"
         super(GridLayer,self).on_enter()
+        # Keep a reference to the battle layer
+        self.battle = self.get_ancestor(battle.Battle)
         self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
         # How fast we can scroll
         self.scroller.fastness = 700
@@ -312,15 +311,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
             and self.clear_los(ship, child):
                 targets.append(child)
         return targets
-
-    def on_mouse_press(self, x, y, button, modifiers):
-        # Get the coords from the scrolling manager.
-        x, y = self.scroller.pixel_from_screen(x,y)
-        # Transform mouse pos in local coord
-        x, y = self.scroller.point_to_local((x,y))
-        i, j = self.from_pixel_to_grid(x, y)
-        if i is None or j is None: return
-        self.battle.on_mouse_press(i, j, x, y)
         
     def highlight_cell(self, i, j, color):
         "Highlight the cell in the given color."
