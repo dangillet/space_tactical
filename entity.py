@@ -97,6 +97,11 @@ class Player(object):
             ship.turn_completed = False
             ship.move_completed = False
             ship.attack_completed = False
+    
+    def end_round(self):
+        """Ends the round of the player"""
+        for ship in self.fleet:
+            ship.turn_completed = True
 
 class Asteroid(cocos.sprite.Sprite):
     def __init__(self, image, *args, **kwargs):

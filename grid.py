@@ -343,12 +343,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         """Remove any highlight from the ships"""
         self.highlight_ships(ships, CLEAR_CELL)
             
-    def on_key_press(self, symbol, modifiers):
-        # With Space bar, end of turn
-        if symbol == key.SPACE:
-            self.battle.game_phase.on_end_of_turn()
-            return True
-        
+    def on_key_press(self, symbol, modifiers):        
         # Check for key pressed in our key bindings
         binds = self.bindings
         if symbol in binds:

@@ -4,6 +4,9 @@ import json
 
 import cocos
 from cocos.actions import CallFunc, CallFuncS
+
+from pyglet.window import key
+
 import grid, entity, main, gui
 
 class ViewPort(object):
@@ -75,6 +78,16 @@ class Battle(cocos.layer.Layer):
         
         self.game_phase.on_mouse_press(i, j, x, y)
 
+    def on_key_release(self, symbol, modifiers):
+        # With Space bar, end of turn
+        if symbol == key.SPACE:
+            self.game_phase.on_end_of_turn()
+            return True
+        
+        if symbol == key.RETURN:
+            self.game_phase.on_end_of_round()
+            return True
+    
     def select_ship(self):
         "Make the entity the selecetd ship."
         self.battle_grid.highlight_ships([self.selected], grid.SHIP_SELECTED)
@@ -114,23 +127,6 @@ class Battle(cocos.layer.Layer):
             self.battle_grid.clear_ships_highlight(self.targets)
             self.targets = []
     
-    def end_turn(self):
-        """End the turn of the current ship. If all ships played, change player"""
-        if self.selected is not None and not self.selected.are_actions_running():
-            self.selected.turn_completed = True
-            self.battle_grid.clear_cells([self.battle_grid.from_pixel_to_grid(*(self.selected.position))])
-            if hasattr(self.selected, "reachable_cells"):
-                self.battle_grid.delete_reachable_cells(self.selected)
-            # If targets are selected
-            if self.targets:
-                self.battle_grid.clear_ships_highlight(self.targets)
-                self.targets = []
-            self.selected = None
-            if self.current_player.turn_completed():
-                self.current_player.reset_ships_turn()
-                self.current_player = next(self.players_turn)
-                self.battle_grid.highlight_player(self.current_player)
-    
     def attack_ship(self, attacker, defender):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
@@ -160,10 +156,36 @@ class GamePhase(object):
     def on_end_of_turn(self):
         pass
     
+    def on_end_of_round(self):
+        pass
+        
     def on_exit(self):
         pass
 
-class Idle(GamePhase):
+class StaticGamePhase(GamePhase):
+    """
+    A phase of game which is not a transition.
+    So it's either idle state or shipselected phase.
+    """
+    def __init__(self, battle):
+        super(StaticGamePhase, self).__init__(battle)
+    
+    def on_end_of_round(self):
+        player = self.battle.current_player
+        ships_in_play = [ship for ship in player.fleet if not ship.turn_completed]
+        for ship in ships_in_play:
+            ship.turn_completed = True
+        self.battle_grid.clear_ships_highlight(ships_in_play)
+        self.check_end_of_round()
+        
+    def check_end_of_round(self):
+        "Check at the end of a turn if all ships have played. If so, change player."
+        if self.battle.current_player.turn_completed():
+            self.battle.current_player.reset_ships_turn()
+            self.battle.current_player = next(self.battle.players_turn)
+            self.battle_grid.highlight_player(self.battle.current_player)
+
+class Idle(StaticGamePhase):
     def __init__(self, battle):
         super(Idle, self).__init__(battle)
 
@@ -180,7 +202,7 @@ class Idle(GamePhase):
             self.battle.selected = entity
             self.battle.change_game_phase(ShipSelected(self.battle))
 
-class ShipSelected(GamePhase):
+class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
         super(ShipSelected, self).__init__(battle)
         
@@ -200,19 +222,18 @@ class ShipSelected(GamePhase):
             for ship in self.battle.targets:
                 if ship.get_AABB().contains(x, y):
                     self.battle.change_game_phase(Attack(self.battle, ship))
-        
 
-    
     def on_end_of_turn(self):
         "End the turn of the current ship. If all ships played, change player"
         self.battle.selected.turn_completed = True
         self.battle_grid.clear_ships_highlight([self.battle.selected])
         self.battle.change_game_phase(Idle(self.battle))
-        if self.battle.current_player.turn_completed():
-            self.battle.current_player.reset_ships_turn()
-            self.battle.current_player = next(self.battle.players_turn)
-            self.battle_grid.highlight_player(self.battle.current_player)
-
+        self.check_end_of_round()
+        
+    def on_end_of_round(self):
+        self.on_end_of_turn()
+        super(ShipSelected, self).on_end_of_round()
+    
     def on_exit(self):
         self.battle.deselect_ship()
 
