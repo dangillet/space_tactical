@@ -223,7 +223,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     )
             ox, oy = m, n
         # And after the move, reset the selected ship
-        end_of_move = CallFunc(self.battle.game_phase.on_move_finished)
+        end_of_move = CallFunc(self.battle.game_phase[-1].on_move_finished)
         move = move + end_of_move
         sprite.do(move)
         sprite.do(rotate)

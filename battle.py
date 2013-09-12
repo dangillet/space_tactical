@@ -10,9 +10,9 @@ from pyglet.window import key
 import grid, entity, main, gui
 
 class ViewPort(object):
-    position = (50, 50)
+    position = (0, 0)
     width = main.SCREEN_W - gui.WIDTH - position[0]
-    height = 800
+    height = main.SCREEN_H
     
 class Battle(cocos.layer.Layer):
     def __init__(self):
@@ -25,7 +25,6 @@ class Battle(cocos.layer.Layer):
         self.add(self.ship_info, z=5)
 
         self.load_battlemap()
-        
 
         # Player list
         self.players_turn = cycle(self.players)
@@ -34,7 +33,7 @@ class Battle(cocos.layer.Layer):
             self.battle_grid.add_player_fleet(player, i)
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
-        self.game_phase = Idle(self)
+        self.game_phase = [Idle(self)]
         self.battle_grid.highlight_player(self.current_player)
         
         # Selected object from the grid and list of targets in range
@@ -60,10 +59,18 @@ class Battle(cocos.layer.Layer):
     
     def change_game_phase(self, game_phase):
         "Change the state of the game."
-        self.game_phase.on_exit()
-        self.game_phase = game_phase
-        self.game_phase.on_enter()
+        self.pop_game_phase()
+        self.push_game_phase(game_phase)
     
+    def push_game_phase(self, game_phase):
+        "Push a new state to the game."
+        self.game_phase.append(game_phase)
+        game_phase.on_enter()
+    
+    def pop_game_phase(self):
+        "Pop the last state of the game."
+        self.game_phase.pop().on_exit()
+        
     def on_mouse_press(self, x, y, button, modifiers):
         """
         The game logic happens in the state machine.
@@ -76,16 +83,16 @@ class Battle(cocos.layer.Layer):
         i, j = self.battle_grid.from_pixel_to_grid(x, y)
         if i is None or j is None: return
         
-        self.game_phase.on_mouse_press(i, j, x, y)
+        self.game_phase[-1].on_mouse_press(i, j, x, y)
 
     def on_key_release(self, symbol, modifiers):
         # With Space bar, end of turn
         if symbol == key.SPACE:
-            self.game_phase.on_end_of_turn()
+            self.game_phase[-1].on_end_of_turn()
             return True
         
         if symbol == key.RETURN:
-            self.game_phase.on_end_of_round()
+            self.game_phase[-1].on_end_of_round()
             return True
     
     def select_ship(self):
@@ -109,10 +116,9 @@ class Battle(cocos.layer.Layer):
         self.targets = self.battle_grid.get_targets(self.selected)
         self.battle_grid.highlight_ships(self.targets, grid.TARGET)
         
-    def deselect_ship(self):
+    def deselect_ship(self, ship):
         "Deselect the currently selected ship if in play."
-        if not self.selected.turn_completed:
-            self.battle_grid.highlight_ships([self.selected], grid.PLAYER_TURN)
+        self.battle_grid.highlight_ships([ship], grid.PLAYER_TURN)
     
     def clear_reachable_cells(self):
         "Clear the reachable cells if any"
@@ -188,12 +194,6 @@ class StaticGamePhase(GamePhase):
 class Idle(StaticGamePhase):
     def __init__(self, battle):
         super(Idle, self).__init__(battle)
-
-    def on_enter(self):
-        self.selected = None
-        self.battle.deselect_targets()
-        self.battle.ship_info.display('')
-        self.battle.clear_reachable_cells()
     
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
@@ -208,34 +208,35 @@ class ShipSelected(StaticGamePhase):
         
     def on_enter(self):
         self.battle.select_ship()
-        self.battle.ship_info.display(repr(self.battle.selected))
-    
+        self.selected = self.battle.selected
+        self.battle.ship_info.display(repr(self.selected))
+        
     def on_mouse_press(self, i, j, x, y):
+        entity = self.battle_grid.get_entity(x, y)
         # If we clicked on our selected ship, deselect it.
-        if self.battle.selected.get_AABB().contains(x, y):
+        if self.selected is entity:
             self.battle.change_game_phase(Idle(self.battle))
         # If we clicked on a reachable cell, move the ship there
         elif self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
-            self.battle.change_game_phase(Move(self.battle, i, j))
+            self.battle.push_game_phase(Move(self.battle, i, j))
+        elif entity is not None and entity.player == self.battle.current_player \
+                and not entity.turn_completed:
+            self.battle.selected = entity
+            self.battle.change_game_phase(ShipSelected(self.battle))
         # If we clicked on a target, attack it.
         elif self.battle.targets:
             for ship in self.battle.targets:
                 if ship.get_AABB().contains(x, y):
-                    self.battle.change_game_phase(Attack(self.battle, ship))
-
-    def on_end_of_turn(self):
-        "End the turn of the current ship. If all ships played, change player"
-        self.battle.selected.turn_completed = True
-        self.battle_grid.clear_ships_highlight([self.battle.selected])
-        self.battle.change_game_phase(Idle(self.battle))
-        self.check_end_of_round()
+                    self.battle.push_game_phase(Attack(self.battle, ship))
         
     def on_end_of_round(self):
-        self.on_end_of_turn()
+        self.battle.change_game_phase(Idle(self.battle))
         super(ShipSelected, self).on_end_of_round()
-    
+
     def on_exit(self):
-        self.battle.deselect_ship()
+        self.battle.deselect_ship(self.selected)
+        self.battle.clear_reachable_cells()
+        self.battle.deselect_targets()
 
 class Attack(GamePhase):
     def __init__(self, battle, ennemy):
@@ -244,12 +245,11 @@ class Attack(GamePhase):
     
     def on_enter(self):
         self.battle.attack_ship(self.battle.selected, self.ennemy)
-        self.battle.change_game_phase(ShipSelected(self.battle))
+        self.battle.pop_game_phase()
     
     def on_exit(self):
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
-        self.battle.clear_reachable_cells()
         
 
 class Move(GamePhase):
@@ -263,9 +263,8 @@ class Move(GamePhase):
         self.battle.deselect_targets()
         
     def on_move_finished(self):
-        self.battle.change_game_phase(ShipSelected(self.battle))
+        self.battle.pop_game_phase()
     
     def on_exit(self):
         self.battle.selected.move_completed = True
-        self.battle.deselect_targets()
-        self.battle.clear_reachable_cells()
+        self.battle.select_ship()
