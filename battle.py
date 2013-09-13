@@ -223,10 +223,13 @@ class Idle(StaticGamePhase):
         
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
-        if entity is not None and entity.player == self.battle.current_player \
+        if entity is not None:
+            if entity.player == self.battle.current_player \
                 and not entity.turn_completed:
-            self.battle.selected = entity
-            self.battle.change_game_phase(ShipSelected(self.battle))
+                self.battle.selected = entity
+                self.battle.change_game_phase(ShipSelected(self.battle))
+            else:
+                self.battle.ship_info.display(repr(entity))
 
 class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
