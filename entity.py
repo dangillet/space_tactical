@@ -27,9 +27,9 @@ Energy type: %s {}
 {.tab_stops [120]}
 damage: %d{#x09}range: %d {}
 precision: %d%%{#x09}temperature: %d {}
-reliability: %0.2f
+reliability: %d%%{}
 """ % (self.weapon_type, self.w_names[self.damage_type], self.damage, 
-             self.range, self.precision*100, self.temperature, self.reliability)
+             self.range, self.precision*100, self.temperature, self.reliability*100)
         
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type="Fighter", speed= 5, hull= 10,
@@ -80,9 +80,13 @@ class Player(object):
         self.fleet = []
     
     def add_ship(self, ship):
-        """Add a ship to the fleet"""
+        "Add a ship to the fleet"
         ship.player = self
         self.fleet.append(ship)
+    
+    def destroy_ship(self, ship):
+        "Destroys a ship from the fleet"
+        self.fleet.remove(ship)
     
     def turn_completed(self):
         """Test if all ships have played"""

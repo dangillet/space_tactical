@@ -26,7 +26,7 @@
     "image": "ship.png",
     "speed": 5,
     "hull": 5,
-    "shield": 2,
+    "shield": 1,
     "weapon": "Laser 1"
     },
 
@@ -35,7 +35,7 @@
     "image": "ship.png",
     "speed": 3,
     "hull": 40,
-    "shield": 4,
+    "shield": 2,
     "weapon": "Laser 2"
     }
   ]
