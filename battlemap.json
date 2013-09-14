@@ -1,7 +1,7 @@
 {
   "battlemap": 
   {
-    "col": 20, "row":25,
+    "col": 15, "row":15,
     "octave": 1, "persistance": 0.1, "freq": 0.3, "sparsity": 205, "x_off": 100, "y_off": 100, "density": 0.1
   },
   "players":
@@ -10,14 +10,14 @@
         "name": "Daniel",
         "fleet": 
         {
-            "Fighter": 3, "Cruiser": 1
+            "Fighter": 3, "Cruiser": 1, "Destroyer": 2
         }
       },
       {
         "name": "Vincent",
         "fleet": 
         {
-            "Fighter":4, "Cruiser": 1
+            "Fighter":4, "Cruiser": 2, "Destroyer": 1
         }
       }
   ]  

@@ -5,14 +5,16 @@ import pyglet
 
 import battle, gui
 
-SCREEN_W, SCREEN_H = 1600, 900
+SCREEN_W, SCREEN_H = 1120, 630 #16/9 aspect ratio. Small enough for my laptop to work comfortably
 
 def load_resource():
-    pyglet.font.add_file('Classic Robot.ttf')
+    pyglet.resource.path = ['res', 'res/images', 'res/fonts']
+    pyglet.resource.reindex()
+    pyglet.resource.add_font('Classic Robot.ttf')
     action_man = pyglet.font.load('Classic Robot')
-    pyglet.font.add_file('Classic Robot Bold.ttf')
+    pyglet.resource.add_font('Classic Robot Bold.ttf')
     action_man = pyglet.font.load('Classic Robot', bold=True)
-    pyglet.font.add_file('Classic Robot Italic.ttf')
+    pyglet.resource.add_font('Classic Robot Italic.ttf')
     action_man = pyglet.font.load('Classic Robot', italic=True)
     
 def main():
