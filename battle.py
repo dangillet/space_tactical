@@ -29,7 +29,7 @@ class Battle(cocos.layer.Layer):
             (main.SCREEN_W - INFO_WIDTH + PADDING, main.SCREEN_H - 2*PADDING - SHIP_INFO_HEIGHT),
             INFO_WIDTH - 2*PADDING, SHIP_INFO_HEIGHT)
         self.add(self.ship_info, z=5)
-        self.log_info = gui.InfoLayer(
+        self.log_info = gui.ScrollableInfoLayer(
             (main.SCREEN_W - INFO_WIDTH + PADDING, PADDING),
             INFO_WIDTH - 2*PADDING, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*PADDING)
         self.add(self.log_info, z=5)

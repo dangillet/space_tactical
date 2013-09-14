@@ -42,3 +42,27 @@ class InfoLayer(cocos.layer.Layer):
             self.info_layer.anchor_y= 'bottom'
             self.info_layer.y = 0
             self.info_layer.view_y = self.info_layer.height - self.info_layer.content_height
+
+class ScrollableInfoLayer(InfoLayer):
+    def __init__(self, position, width, height):
+        self.is_event_handler = True
+        super( ScrollableInfoLayer, self ).__init__(position, width, height)
+        
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        x, y = director.get_virtual_coordinates(x, y)
+        if self.contains(x, y):
+            self.info_layer.view_y -= dy
+    
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
+        x, y = director.get_virtual_coordinates(x, y)
+        if self.contains(x, y):
+            self.info_layer.view_y += scroll_y * 20
+    
+    def contains(self, x, y):
+        '''Test whether this InfoLayer contains the pixel coordinates
+        given.
+        '''
+        sx, sy = self.position
+        if x < sx or x > sx + self.info_w: return False
+        if y < sy or y > sy + self.info_h: return False
+        return True

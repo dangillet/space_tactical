@@ -396,6 +396,15 @@ class GridLayer(cocos.layer.ScrollableLayer):
             ship.position = (x, y)
             ship.rotation = orientation[side]
             self.add(ship)
+    
+    def remove(self, entity):
+        "Removes the entity both from the Layer and from the dict entities"
+        super(GridLayer, self).remove(entity)
+        for grid_pos, ship in self.entities['ships'].items():
+            if ship is entity:
+                del self.entities['ships'][grid_pos]
+             
+        
 
 class DistanceMatrix(object):
     """
