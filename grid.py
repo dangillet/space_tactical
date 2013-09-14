@@ -45,7 +45,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
         self.squares = [[None for _ in range(self.row)] for _ in range(self.col)]
         self.borders = []
         
-        self.entities = {'asteroids' : [], 'ships': []}
+        # Each entity type has a dict {(i, j): entity}
+        self.entities = {'asteroids' : {}, 'ships': {}}
         
         # Obstacle on map
         noise = np.zeros(shape=(self.col, self.row))
@@ -60,9 +61,21 @@ class GridLayer(cocos.layer.ScrollableLayer):
             c = v - map_kwargs['sparsity']
             if c<0: c = 0
             noise[x][y] = 255 - (math.pow(map_kwargs['density'], c) * 255)
-        self.entities['asteroids']= zip(*np.where(noise> 0.))
+        asteroids_pos = zip(*np.where(noise> 0.))
 
-        
+        # We build the asteroids
+        raw = pyglet.image.load('aster3.png')
+        raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
+        texture_seq = pyglet.image.TextureGrid(raw_seq)
+
+        for x, y in asteroids_pos:
+            rotation_speed = uniform(0.07, 0.15)
+            anim = pyglet.image.Animation.from_image_sequence(texture_seq, rotation_speed, True)
+            asteroid = entity.Asteroid(anim, position=self.from_grid_to_pixel(x,y), 
+                                                         rotation = uniform(0, 360))
+            self.sprite_batch.add(asteroid)
+            self.entities['asteroids'][(x, y)] = asteroid
+            
         # Background image
         img=pyglet.resource.image("outer-space.jpg")
         self.bg_texture = pyglet.image.TileableTexture.create_for_image(img)
@@ -75,16 +88,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
                             ('c4B', (128, 128, 128, 0) * 4))
         
-        # We build the asteroids
-        raw = pyglet.image.load('aster3.png')
-        raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
-        texture_seq = pyglet.image.TextureGrid(raw_seq)
-
-        for x,y in self.entities['asteroids']:
-            rotation_speed = uniform(0.07, 0.15)
-            anim = pyglet.image.Animation.from_image_sequence(texture_seq, rotation_speed, True)
-            asteroid = entity.Asteroid(anim, position = self.from_grid_to_pixel(x,y), rotation = uniform(0, 360))
-            self.sprite_batch.add(asteroid)
+        
 
         # We build the lines of the grid.
         lines=[]
@@ -107,7 +111,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         
         # We build the distance matrix.
         self.dist_mat = DistanceMatrix(self.row, self.col)
-        for asteroid in self.entities['asteroids']:
+        for asteroid in self.entities['asteroids'].iterkeys():
             self.dist_mat.add_obstacle(*asteroid)
         
         # We store key state
@@ -182,7 +186,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         "Removes highlights from the grid"
         for row in range(self.row):
             for col in range(self.col):
-                if (col,row) not in self.entities['asteroids']:
+                if (col,row) in self.entities['asteroids']:
                     self.squares[col][row].colors = [128, 128, 128, 0] * 4
                 else:
                     self.squares[col][row].colors = [0, 0, 128, 150] * 4
@@ -228,8 +232,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         sprite.do(move)
         sprite.do(rotate)
         # Update the position in entities['ships']
-        self.entities['ships'].remove( (i0, j0) )
-        self.entities['ships'].append( (i, j) )
+        self.entities['ships'][(i, j)] = self.entities['ships'].pop( (i0, j0) )
         
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"
@@ -291,13 +294,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
 
     def get_entity(self, x, y):
         "Return the entity at position x, y"
-        for z, child in self.children:
-            # Do not look for the sprite_batch which contains only obstacles
-            if isinstance(child, cocos.batch.BatchNode): continue
-            rect = child.get_AABB()
-            if rect.contains(x, y):
-                return child
-        return None
+        i, j = self.from_pixel_to_grid(x, y)
+        return self.entities['ships'].get( (i, j) )
 
     def get_targets(self, ship):
         "Returns the list of all ennemy ships in range"
@@ -393,7 +391,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         orientation = [90, -90, 180, 0]
         for a, ship in enumerate(player.fleet):
             i, j = starting_cells[a]
-            self.entities['ships'].append((i, j))
+            self.entities['ships'][(i, j)] = ship
             x, y = self.from_grid_to_pixel(i,j)
             ship.position = (x, y)
             ship.rotation = orientation[side]
