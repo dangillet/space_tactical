@@ -13,7 +13,7 @@ import grid, entity, main, gui
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
-MARGIN = 20
+MARGIN = 10
 
 class ViewPort(object):
     position = (0, 0)

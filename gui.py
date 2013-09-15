@@ -6,17 +6,18 @@ import pyglet.text as text
 from pyglet.gl import *
 
 BACKGROUND = (50, 50, 50, 255)
+PADDING = 10
         
 class InfoLayer(cocos.layer.ColorLayer):
     def __init__(self, position, width, height):
         super( InfoLayer, self ).__init__(*BACKGROUND, width=width, height=height)
-        self.info_w, self.info_h = width, height
+        self.info_w, self.info_h = width - PADDING, height - PADDING
         self.position = position
         self.document = text.document.FormattedDocument('')
         self.info_layer = text.layout.IncrementalTextLayout(self.document, width= self.info_w
                                                                     , height = self.info_h
                                                                     , multiline=True)
-        
+        self.info_layer.x, self.info_layer.y = PADDING, PADDING
 
     def draw(self, *args, **kwargs):
         super(InfoLayer, self).draw(*args, **kwargs)
@@ -30,6 +31,7 @@ class InfoLayer(cocos.layer.ColorLayer):
         self.info_layer = text.layout.IncrementalTextLayout(self.document, width= self.info_w
                                                                     , height = self.info_h
                                                                     , multiline=True)
+        self.info_layer.x, self.info_layer.y = PADDING, PADDING
                                                                     
     def append_text(self, formatted_text):
         "Adds formatted text to the document"
