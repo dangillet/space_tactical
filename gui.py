@@ -24,6 +24,15 @@ class InfoLayer(cocos.layer.ColorLayer):
         glPushMatrix()
         self.transform()
         self.info_layer.draw()
+        glPushAttrib(GL_LINE_BIT)
+        glEnable(GL_LINE_STIPPLE)
+        glLineWidth(2.5)
+        glLineStipple(1, 0x0F0F)
+        backup_color = self.color
+        self.color = (255, 255, 255)
+        self._vertex_list.draw(pyglet.gl.GL_LINE_LOOP)
+        self.color = backup_color
+        glPopAttrib()
         glPopMatrix()
 
     def display(self, txt):
