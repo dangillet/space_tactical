@@ -11,7 +11,7 @@ import grid, entity, main, gui
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
-PADDING = 20
+MARGIN = 20
 
 class ViewPort(object):
     position = (0, 0)
@@ -26,12 +26,12 @@ class Battle(cocos.layer.Layer):
         self.ships_factory = entity.ShipFactory()
         self.ships_type = self.ships_factory.get_ships_type()
         self.ship_info = gui.InfoLayer(
-            (main.SCREEN_W - INFO_WIDTH + PADDING, main.SCREEN_H - 2*PADDING - SHIP_INFO_HEIGHT),
-            INFO_WIDTH - 2*PADDING, SHIP_INFO_HEIGHT)
+            (main.SCREEN_W - INFO_WIDTH + MARGIN, MARGIN),
+            INFO_WIDTH - 2*MARGIN, SHIP_INFO_HEIGHT)
         self.add(self.ship_info, z=5)
         self.log_info = gui.ScrollableInfoLayer(
-            (main.SCREEN_W - INFO_WIDTH + PADDING, PADDING),
-            INFO_WIDTH - 2*PADDING, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*PADDING)
+            (main.SCREEN_W - INFO_WIDTH + MARGIN, SHIP_INFO_HEIGHT + 2*MARGIN),
+            INFO_WIDTH - 2*MARGIN, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*MARGIN)
         self.add(self.log_info, z=5)
         self.load_battlemap()
 
@@ -146,25 +146,25 @@ class Battle(cocos.layer.Layer):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
-        self.log_info.append_text("""{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}
+        msg = """{font_name 'Classic Robot'}{font_size 12}{color [255, 0, 0, 255]}
 {underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} {}
-{font_size 14}{color [0, 255, 0, 255]}%s
+{color [0, 255, 0, 255]}%s
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
-""" % (attacker.player.name, defender.player.name) )
+""" % (attacker.player.name, defender.player.name)
         dice = random.random()
         weapon = attacker.weapon
         if dice <= weapon.precision:
             dmg = max(0, weapon.damage - defender.shield)
             defender.hull -= dmg
-            self.log_info.append_text(
-                "HIT! %s took %d points of damage." %(defender.ship_type, dmg) )
+            msg += "HIT! %s took %d points of damage. {}\n" %(defender.ship_type, dmg)
             if defender.hull <= 0:
                 self.battle_grid.remove(defender)
                 defender.player.destroy_ship(defender)
-                self.log_info.append_text("%s is destroyed." %(defender.ship_type) )
+                msg += "%s is destroyed.{}\n" %(defender.ship_type)
         else:
-            self.log_info.append_text("Missed!")
+            msg += "Missed!{}\n"
+        self.log_info.prepend_text(msg)
     
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)

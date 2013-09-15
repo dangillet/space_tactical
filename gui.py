@@ -4,9 +4,11 @@ from cocos.director import director
 import pyglet.text as text
 from pyglet.gl import *
 
-class InfoLayer(cocos.layer.Layer):
+BACKGROUND = (50, 50, 50, 255)
+
+class InfoLayer(cocos.layer.ColorLayer):
     def __init__(self, position, width, height):
-        super( InfoLayer, self ).__init__()
+        super( InfoLayer, self ).__init__(*BACKGROUND, width=width, height=height)
         self.info_w, self.info_h = width, height
         self.position = position
         self.document = text.decode_attributed('')
@@ -15,8 +17,10 @@ class InfoLayer(cocos.layer.Layer):
                                                                     , multiline=True)
 
     def draw(self, *args, **kwargs):
+        super(InfoLayer, self).draw(*args, **kwargs)
         glPushMatrix()
         self.transform()
+        
         self.info_layer.draw()
         glPopMatrix()
         
@@ -28,10 +32,8 @@ class InfoLayer(cocos.layer.Layer):
                                                                     
     def append_text(self, formatted_text):
         "Adds formatted text to the document"
-        document = text.decode_attributed(formatted_text)
+        document = text.decode_attributed("\n" + formatted_text)
         insert_pos = len(self.document.text)
-        self.document.insert_text(insert_pos, "\n")
-        insert_pos += 1
         self.document.insert_text(insert_pos, document.text)
 
         for attribute, runlist in document._style_runs.iteritems():
@@ -39,9 +41,16 @@ class InfoLayer(cocos.layer.Layer):
                 self.document.set_style(start + insert_pos, stop + insert_pos, {attribute:value})
         
         if self.info_layer.height < self.info_layer.content_height:
-            self.info_layer.anchor_y= 'bottom'
-            self.info_layer.y = 0
             self.info_layer.view_y = self.info_layer.height - self.info_layer.content_height
+    
+    def prepend_text(self, formatted_text):
+        "Preprends formatted text to the document"
+        document = text.decode_attributed(formatted_text + "\n")
+        self.document.insert_text(0, document.text)
+        
+        for attribute, runlist in document._style_runs.iteritems():
+            for start, stop, value in runlist:
+                self.document.set_style(start, stop, {attribute:value})
 
 class ScrollableInfoLayer(InfoLayer):
     def __init__(self, position, width, height):
