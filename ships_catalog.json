@@ -7,7 +7,7 @@
       "temperature": 10,
       "reliability": 1.0,
       "damage_type": "PLASMA",
-      "damage": 5
+      "damage": [5,7]
     },
     {
       "weapon_type": "Laser 2",
@@ -16,7 +16,7 @@
       "temperature": 20,
       "reliability": 0.9,
       "damage_type": "URANIUM",
-      "damage": 10
+      "damage": [10,15]
     },
     {
       "weapon_type": "Laser 3",
@@ -25,7 +25,7 @@
       "temperature": 20,
       "reliability": 0.9,
       "damage_type": "SONIC",
-      "damage": 15
+      "damage": [15,20]
     }
   ],
   

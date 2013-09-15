@@ -152,10 +152,10 @@ class Battle(cocos.layer.Layer):
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
 """ % (attacker.player.name, defender.player.name)
-        dice = random.random()
         weapon = attacker.weapon
-        if dice <= weapon.precision:
-            dmg = max(0, weapon.damage - defender.shield)
+        if weapon.hit():
+            # Roll damage, but take min 0 damage if shield is greater than dmg
+            dmg = max(0, weapon.damage.roll() - defender.shield)
             defender.hull -= dmg
             msg += "HIT! %s took %d points of damage. {}\n" %(defender.ship_type, dmg)
             if defender.hull <= 0:

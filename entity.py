@@ -2,6 +2,17 @@ import random
 import json
 import cocos
 
+class Damage(object):
+    def __init__(self, minimum, maximum):
+        self.min = minimum
+        self.max = maximum
+    
+    def __repr__(self):
+        return "%d-%d" % (self.min, self.max)
+    
+    def roll(self):
+        return random.uniform(self.min, self.max)
+
 class Weapon(object):
     #Damage Type
     URANIUM = 0
@@ -12,6 +23,7 @@ class Weapon(object):
     
     def __init__( self, weapon_type, weapon_range, precision, temp,
                   reliability, dmg_type, dmg):
+        "dmg is a list with min and max values."
         self.ship = None
         self.weapon_type = weapon_type
         self.range = weapon_range
@@ -19,18 +31,22 @@ class Weapon(object):
         self.temperature = temp
         self.reliability = reliability
         self.damage_type = dmg_type
-        self.damage = dmg
+        self.damage = Damage(dmg[0], dmg[1])
     def __repr__(self):
         return """
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
 Energy type: %s {}
 {.tab_stops [120]}
-damage: %d{#x09}range: %d {}
+damage: %r{#x09}range: %d {}
 precision: %d%%{#x09}temperature: %d {}
 reliability: %d%%{}
 """ % (self.weapon_type, self.w_names[self.damage_type], self.damage, 
              self.range, self.precision*100, self.temperature, self.reliability*100)
-        
+    
+    def hit(self):
+        "Returns True if the weapon hit."
+        return random.random() <= self.precision
+
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type="Fighter", speed= 5, hull= 10,
                 shield=2, weapon=None):
@@ -142,13 +158,14 @@ class ShipFactory(object):
                      v['speed'],
                      v['hull'],
                      v['shield'],
-                     self.weapons[v['weapon']]
+                     v['weapon']
                     )
     
     def create_ship(self, ship_type):
         "Create a new ship of type ship_type"
         # The 5th element in the ship definition is the weapon
-        weapon_args = self.ships[ship_type][5]
+        weapon_type = self.ships[ship_type][5]
+        weapon_args = self.weapons[weapon_type]
         weapon = Weapon(*weapon_args)
         # Take all args except the last, and replace it with the constructed weapon
         return Ship(*self.ships[ship_type][:-1], weapon=weapon)
