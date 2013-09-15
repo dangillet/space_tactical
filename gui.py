@@ -1,29 +1,30 @@
 import cocos
 from cocos.director import director
 
+import pyglet
 import pyglet.text as text
 from pyglet.gl import *
 
 BACKGROUND = (50, 50, 50, 255)
-
+        
 class InfoLayer(cocos.layer.ColorLayer):
     def __init__(self, position, width, height):
         super( InfoLayer, self ).__init__(*BACKGROUND, width=width, height=height)
         self.info_w, self.info_h = width, height
         self.position = position
-        self.document = text.decode_attributed('')
+        self.document = text.document.FormattedDocument('')
         self.info_layer = text.layout.IncrementalTextLayout(self.document, width= self.info_w
                                                                     , height = self.info_h
                                                                     , multiline=True)
+        
 
     def draw(self, *args, **kwargs):
         super(InfoLayer, self).draw(*args, **kwargs)
         glPushMatrix()
         self.transform()
-        
         self.info_layer.draw()
         glPopMatrix()
-        
+
     def display(self, txt):
         self.document = text.decode_attributed(txt)
         self.info_layer = text.layout.IncrementalTextLayout(self.document, width= self.info_w

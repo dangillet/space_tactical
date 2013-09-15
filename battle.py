@@ -6,6 +6,8 @@ import cocos
 from cocos.actions import CallFunc, CallFuncS
 
 from pyglet.window import key
+from pyglet.gl import *
+import pyglet
 
 import grid, entity, main, gui
 
@@ -49,6 +51,8 @@ class Battle(cocos.layer.Layer):
         self.selected, self.targets = None, None
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
+        
+
     
     def load_battlemap(self):
         with open("battlemap.json") as f:
@@ -146,7 +150,7 @@ class Battle(cocos.layer.Layer):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
-        msg = """{font_name 'Classic Robot'}{font_size 12}{color [255, 0, 0, 255]}
+        msg = """{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 {underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} {}
 {color [0, 255, 0, 255]}%s
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s

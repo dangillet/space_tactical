@@ -18,7 +18,9 @@ def load_resource():
     action_man = pyglet.font.load('Classic Robot', italic=True)
     
 def main():
-    director.init(width = SCREEN_W, height=SCREEN_H)
+    # do_not_scale is set to True because otherwise the fonts get blurred
+    # when the director applies some scaling.
+    director.init(width = SCREEN_W, height=SCREEN_H, do_not_scale=True)
     load_resource()
     my_battle = battle.Battle()
     main_scene = cocos.scene.Scene(my_battle)
