@@ -64,7 +64,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         asteroids_pos = zip(*np.where(noise> 0.))
 
         # We build the asteroids
-        raw = pyglet.image.load('aster3.png')
+        raw = pyglet.resource.image('aster3.png')
         raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
         texture_seq = pyglet.image.TextureGrid(raw_seq)
 

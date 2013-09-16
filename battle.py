@@ -150,24 +150,24 @@ class Battle(cocos.layer.Layer):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
-        msg = """{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
+        msg = _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 {underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} {}
 {color [0, 255, 0, 255]}%s
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
-""" % (attacker.player.name, defender.player.name)
+""") % (attacker.player.name, defender.player.name)
         weapon = attacker.weapon
         if weapon.hit():
             # Roll damage, but take min 0 damage if shield is greater than dmg
             dmg = max(0, weapon.damage.roll() - defender.shield)
             defender.hull -= dmg
-            msg += "HIT! %s took %d points of damage. {}\n" %(defender.ship_type, dmg)
+            msg += _("HIT! %s took %d points of damage. {}\n") %(defender.ship_type, dmg)
             if defender.hull <= 0:
                 self.battle_grid.remove(defender)
                 defender.player.destroy_ship(defender)
-                msg += "%s is destroyed.{}\n" %(defender.ship_type)
+                msg += _("%s is destroyed.{}\n") %(defender.ship_type)
         else:
-            msg += "Missed!{}\n"
+            msg += _("Missed!{}\n")
         self.log_info.prepend_text(msg)
     
     def move_ship(self, ship, i, j):
@@ -232,7 +232,7 @@ class Idle(StaticGamePhase):
                 self.battle.selected = entity
                 self.battle.change_game_phase(ShipSelected(self.battle))
             else:
-                self.battle.ship_info.display(repr(entity))
+                self.battle.ship_info.display(entity.show())
 
 class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
@@ -243,7 +243,7 @@ class ShipSelected(StaticGamePhase):
         # We keep a reference to the selected ship, so if we change ship
         # We can clear the "old" selected ship in the on_exit method.
         self.selected = self.battle.selected
-        self.battle.ship_info.display(repr(self.selected))
+        self.battle.ship_info.display(self.selected.show())
         
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
