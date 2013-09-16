@@ -6,7 +6,7 @@
       "precision": 0.8,
       "temperature": 10,
       "reliability": 1.0,
-      "damage_type": "PLASMA",
+      "energy_type": "PLASMA",
       "damage": [5,7]
     },
     {
@@ -15,7 +15,7 @@
       "precision": 0.6,
       "temperature": 20,
       "reliability": 0.9,
-      "damage_type": "URANIUM",
+      "energy_type": "URANIUM",
       "damage": [10,15]
     },
     {
@@ -24,7 +24,7 @@
       "precision": 0.5,
       "temperature": 20,
       "reliability": 0.9,
-      "damage_type": "SONIC",
+      "energy_type": "SONIC",
       "damage": [15,20]
     }
   ],
@@ -35,7 +35,9 @@
     "image": "ship.png",
     "speed": 5,
     "hull": 5,
-    "shield": 1,
+    "shield": [
+            {"pr":10, "energy_type":"PLASMA"}
+        ],
     "weapon": "Laser 1"
     },
     
@@ -44,7 +46,9 @@
     "image": "ship2.png",
     "speed": 3,
     "hull": 50,
-    "shield": 2,
+    "shield": [
+            {"pr":20, "energy_type":"PLASMA"}
+        ],
     "weapon": "Laser 3"
     },
 
@@ -53,7 +57,10 @@
     "image": "ship1.png",
     "speed": 3,
     "hull": 40,
-    "shield": 2,
+    "shield": [
+            {"pr":20, "energy_type":"URANIUM"},
+            {"pr":10, "energy_type":"PLASMA"}
+        ],
     "weapon": "Laser 2"
     }
   ]

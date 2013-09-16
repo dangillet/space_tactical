@@ -26,7 +26,6 @@ class Battle(cocos.layer.Layer):
         super(Battle, self ).__init__()
         self.players = []
         self.ships_factory = entity.ShipFactory()
-        self.ships_type = self.ships_factory.get_ships_type()
         self.ship_info = gui.InfoLayer(
             (main.SCREEN_W - INFO_WIDTH + MARGIN, MARGIN),
             INFO_WIDTH - 2*MARGIN, SHIP_INFO_HEIGHT)
@@ -159,7 +158,8 @@ ship.{}
         weapon = attacker.weapon
         if weapon.hit():
             # Roll damage, but take min 0 damage if shield is greater than dmg
-            dmg = max(0, weapon.damage.roll() - defender.shield)
+            protection = defender.shield.get(weapon.energy_type, 0)
+            dmg = max(0, weapon.damage.roll() - protection)
             defender.hull -= dmg
             msg += _("HIT! %s took %d points of damage. {}\n") %(defender.ship_type, dmg)
             if defender.hull <= 0:

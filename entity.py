@@ -12,15 +12,11 @@ class Damage(object):
         return "%d-%d" % (self.min, self.max)
     
     def roll(self):
-        return random.uniform(self.min, self.max)
+        return random.randint(self.min, self.max)
 
 class Weapon(object):
     #Damage Type
-    URANIUM = 0
-    PLASMA = 1
-    SONIC = 2
-    WARP = 3
-    w_names=[_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
+    energy_type=[_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
     
     def __init__( self, weapon_type, weapon_range, precision, temp,
                   reliability, dmg_type, dmg):
@@ -31,8 +27,9 @@ class Weapon(object):
         self.precision = precision
         self.temperature = temp
         self.reliability = reliability
-        self.damage_type = dmg_type
+        self.energy_type = dmg_type
         self.damage = Damage(dmg[0], dmg[1])
+    
     def show(self):
         return _("""
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
@@ -41,9 +38,19 @@ Energy type: %s {}
 damage: %r{#x09}range: %d {}
 precision: %d%%{#x09}temperature: %d {}
 reliability: %d%%{}
-""") % (self.weapon_type, self.w_names[self.damage_type], self.damage, 
+""") % (self.weapon_type, self.energy_type, self.damage, 
              self.range, self.precision*100, self.temperature, self.reliability*100)
     
+    def __repr__(self):
+        return """
+%s
+Energy type: %s
+damage: %r\trange: %d
+precision: %d%%\ttemperature: %d
+reliability: %d%%
+""" % (self.weapon_type, self.energy_type, self.damage, 
+             self.range, self.precision*100, self.temperature, self.reliability*100)
+
     def hit(self):
         "Returns True if the weapon hit."
         return random.random() <= self.precision
@@ -71,15 +78,27 @@ class Ship(cocos.sprite.Sprite):
         self.attack_completed = False
     
     def show(self):
+        shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
         s =  _("""
 {font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
-{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %d
-""") % (self.ship_type, self.speed, self.hull, self.shield)
+{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
+""") % (self.ship_type, self.speed, self.hull, shield)
         s += _("""
 {underline [255, 255, 255, 255]}Weapon{underline None}: {}
 %s""") % (self.weapon.show())
         return s
     
+    def __repr__(self):
+        shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
+        s = """
+%s
+Speed: %d\tHull: %d\tShield: %s
+""" % (self.ship_type, self.speed, self.hull, shield)
+        s += """
+Weapon:
+%s""" % (self.weapon)
+        return s
+        
     def add_weapon(self, weapon):
         "Add a weapon to the ship"
         self.weapon = weapon
@@ -141,24 +160,30 @@ class ShipFactory(object):
             self.ships = {}
             self.weapons = {}
             data = json.load(f)
-            for v in data['weapons']:
+            # Read all the weapons
+            for v in data['weapons']: # v for value
                 self.weapons[v['weapon_type']] = \
                     (v['weapon_type'],
                      v['range'],
                      v['precision'],
                      v['temperature'],
                      v['reliability'],
-                     Weapon.w_names.index(_(v['damage_type'])),
+                     # Translate the energy type
+                     _(v['energy_type']),
                      v['damage'],
                     )
-                            
+            # Read all the ships
             for v in data['ships']:
+                # Read the different shields on the ship
+                shields = {}
+                for shield in v['shield']:
+                    shields[_(shield['energy_type'])] = shield['pr']
                 self.ships[v['ship_type']] = \
                     (v['image'].encode('utf-8'), # cocos.Sprite needs a str, not a unicode
                      v['ship_type'],
                      v['speed'],
                      v['hull'],
-                     v['shield'],
+                     shields,
                      v['weapon']
                     )
     
@@ -171,14 +196,11 @@ class ShipFactory(object):
         # Take all args except the last, and replace it with the constructed weapon
         return Ship(*self.ships[ship_type][:-1], weapon=weapon)
     
-    def get_ships_type(self):
-        return [ship_type for ship_type in self.ships.iterkeys()]
-    
 if __name__ == '__main__':
-    
     from cocos.director import director
-    director.init(width = 1600, height=900)
     
+    director.init(width = 1600, height=900)
+    main.load_resource()
     ships_factory = ShipFactory()
 
     for ship_type in ships_factory.ships.iterkeys():

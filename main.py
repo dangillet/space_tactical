@@ -1,19 +1,20 @@
 import gettext
 
+localedir = './i18n'
+translations = {'fr': gettext.translation('messages', localedir, languages=['fr_FR']),
+                'en': gettext.translation('messages', localedir, languages=['en_US'])
+                }
+translations['fr'].install(True)
+
 import cocos
 from cocos.director import director
 
 import pyglet
 
-import battle, gui
-
 SCREEN_W, SCREEN_H = 1120, 630 #16/9 aspect ratio. Small enough for my laptop to work comfortably
 
-localedir = './i18n'
-translations = {'fr': gettext.translation('messages', localedir, languages=['fr_FR']),
-                'en': gettext.translation('messages', localedir, languages=['en_US'])
-                }
-translations['en'].install(True)
+import battle, gui
+
 
 def load_resource():
     pyglet.resource.path = ['res', 'res/images', 'res/fonts']
