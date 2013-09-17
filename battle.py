@@ -248,19 +248,20 @@ class ShipSelected(StaticGamePhase):
         
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
-        # If we clicked on our selected ship, deselect it.
-        if entity is self.selected:
-            self.battle.change_game_phase(Idle(self.battle))
         # If we clicked on a reachable cell, move the ship there
-        elif self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
+        if self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
             self.battle.push_game_phase(Move(self.battle, i, j))
         # If we clicked on another ship, select it
-        elif entity is not None and entity.player == self.battle.current_player:
+        elif entity is not None and entity.player == self.battle.current_player \
+            and entity is not self.battle.selected:
             self.battle.selected = entity
             self.battle.change_game_phase(ShipSelected(self.battle))
         # If we clicked on a target, attack it.
         elif self.battle.targets is not None and entity in self.battle.targets:
             self.battle.push_game_phase(Attack(self.battle, entity))
+        # If we clicked on our selected ship or in an empy cell, deselect the ship.
+        else: # entity is self.selected or :
+            self.battle.change_game_phase(Idle(self.battle))
         
     def on_end_of_round(self):
         self.battle.change_game_phase(Idle(self.battle))
