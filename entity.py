@@ -4,6 +4,10 @@ import cocos
 import main
 
 class Damage(object):
+    """
+    Object that has a min and max value and gives a number between these
+    2 values
+    """
     def __init__(self, minimum, maximum):
         self.min = minimum
         self.max = maximum
@@ -15,6 +19,9 @@ class Damage(object):
         return random.randint(self.min, self.max)
 
 class Weapon(object):
+    """
+    Weapon with all its caracteristics. 
+    """
     #Damage Type
     energy_type=[_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
     
@@ -31,6 +38,7 @@ class Weapon(object):
         self.damage = Damage(dmg[0], dmg[1])
     
     def show(self):
+        "Display the weapon in the formatted text style"
         return _("""
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
 Energy type: %s {}
@@ -53,11 +61,15 @@ reliability: %d%%
 
     def hit(self):
         "Returns True if the weapon hit."
+        self.rounds_last_used = 0
         return random.random() <= self.precision
+    
+    def reset_turn(self):
+        pass
 
 class Ship(cocos.sprite.Sprite):
-    def __init__( self, image, ship_type="Fighter", speed= 5, hull= 10,
-                shield=2, weapon=None):
+    def __init__( self, image, ship_type, speed, hull,
+                shield, weapon):
         """
             Initialize the Ship
             player: Player
@@ -78,6 +90,7 @@ class Ship(cocos.sprite.Sprite):
         self.attack_completed = False
     
     def show(self):
+        "Display the ship and its weapons in the formatted text style"
         shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
         s =  _("""
 {font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
@@ -103,6 +116,12 @@ Weapon:
         "Add a weapon to the ship"
         self.weapon = weapon
         self.weapon.ship = self
+    
+    def reset_turn(self):
+        self.turn_completed = False
+        self.move_completed = False
+        self.attack_completed = False
+        self.weapon.reset_turn()
     
 class Player(object):
     def __init__(self, name):
@@ -134,9 +153,7 @@ class Player(object):
     def reset_ships_turn(self):
         """Reset the ships turn_completed"""
         for ship in self.fleet:
-            ship.turn_completed = False
-            ship.move_completed = False
-            ship.attack_completed = False
+            ship.reset_turn()
     
     def end_round(self):
         """Ends the round of the player"""

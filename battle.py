@@ -215,8 +215,8 @@ class StaticGamePhase(GamePhase):
     def check_end_of_round(self):
         "Check at the end of a turn if all ships have played. If so, change player."
         if self.battle.current_player.turn_completed():
-            self.battle.current_player.reset_ships_turn()
             self.battle.current_player = next(self.battle.players_turn)
+            self.battle.current_player.reset_ships_turn()
             self.battle_grid.highlight_player(self.battle.current_player)
 
 class Idle(StaticGamePhase):
