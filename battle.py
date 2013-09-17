@@ -157,8 +157,9 @@ ship.{}
 """) % (attacker.player.name, defender.player.name)
         weapon = attacker.weapon
         if weapon.hit():
-            # Roll damage, but take min 0 damage if shield is greater than dmg
+            # If our shield is against the weapon energy type, use it
             protection = defender.shield.get(weapon.energy_type, 0)
+            # Roll damage, but take min 0 damage if shield is greater than dmg
             dmg = max(0, weapon.damage.roll() - protection)
             defender.hull -= dmg
             msg += _("HIT! %s took %d points of damage. {}\n") %(defender.ship_type, dmg)

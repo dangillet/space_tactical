@@ -7,6 +7,20 @@ from pyglet.gl import *
 
 BACKGROUND = (50, 50, 50, 255)
 PADDING = 10
+
+class DashedLine(pyglet.graphics.OrderedGroup):
+    "Ordered Group that puts a dashed line with some width"
+    def __init__(self, order, parent=None):
+        super(DashedLine, self).__init__(order, parent)
+    
+    def set_state(self):
+        glPushAttrib(GL_LINE_BIT)
+        glEnable(GL_LINE_STIPPLE)
+        glLineWidth(2.5)
+        glLineStipple(1, 0x0F0F)
+        
+    def unset_state(self):
+        glPopAttrib()
         
 class InfoLayer(cocos.layer.ColorLayer):
     def __init__(self, position, width, height):
@@ -19,20 +33,28 @@ class InfoLayer(cocos.layer.ColorLayer):
                                                                     , multiline=True)
         self.info_layer.x, self.info_layer.y = PADDING, PADDING
 
+    def on_enter(self):
+        super(InfoLayer, self).on_enter()
+        # Migrate the vertex list so we can give it an ordered group
+        self._batch.migrate(self._vertex_list,
+                            pyglet.gl.GL_QUADS,
+                            pyglet.graphics.OrderedGroup(0),
+                            self._batch)
+        x, y = self.width, self.height
+        ox, oy = 0, 0
+        self._border_vertex_list = self._batch.add(4, pyglet.gl.GL_LINE_LOOP, DashedLine(1),
+            ('v2i', ( ox, oy,
+                      ox, oy + y,
+                      ox+x, oy+y,
+                      ox+x, oy)),
+            ('c4B', (255, 255, 255, 255)*4 ))
+        
+    
     def draw(self, *args, **kwargs):
         super(InfoLayer, self).draw(*args, **kwargs)
         glPushMatrix()
         self.transform()
         self.info_layer.draw()
-        glPushAttrib(GL_LINE_BIT)
-        glEnable(GL_LINE_STIPPLE)
-        glLineWidth(2.5)
-        glLineStipple(1, 0x0F0F)
-        backup_color = self.color
-        self.color = (255, 255, 255)
-        self._vertex_list.draw(pyglet.gl.GL_LINE_LOOP)
-        self.color = backup_color
-        glPopAttrib()
         glPopMatrix()
 
     def display(self, txt):
