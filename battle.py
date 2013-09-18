@@ -251,14 +251,24 @@ class ShipSelected(StaticGamePhase):
         # If we clicked on a reachable cell, move the ship there
         if self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
             self.battle.push_game_phase(Move(self.battle, i, j))
-        # If we clicked on another ship, select it
-        elif entity is not None and entity.player == self.battle.current_player \
-            and entity is not self.battle.selected:
-            self.battle.selected = entity
-            self.battle.change_game_phase(ShipSelected(self.battle))
-        # If we clicked on a target, attack it.
-        elif self.battle.targets is not None and entity in self.battle.targets:
-            self.battle.push_game_phase(Attack(self.battle, entity))
+        # If we clicked on another ship
+        elif entity is not None:
+            # If it belongs to the player, select it
+            if entity.player == self.battle.current_player:
+                if entity is not self.battle.selected:
+                    self.battle.selected = entity
+                    self.battle.change_game_phase(ShipSelected(self.battle))
+                # If we clicked on our selected ship, deselect it
+                else:
+                    self.battle.change_game_phase(Idle(self.battle))
+            # If we clicked on a target, attack it.
+            elif self.battle.targets is not None and entity in self.battle.targets:
+                self.battle.push_game_phase(Attack(self.battle, entity))
+            # Otherwise display info on this ship
+            else:
+                self.battle.ship_info.display(entity.show())
+        
+
         # If we clicked on our selected ship or in an empy cell, deselect the ship.
         else: # entity is self.selected or :
             self.battle.change_game_phase(Idle(self.battle))
