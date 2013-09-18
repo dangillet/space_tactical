@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2013-09-16 16:20+W. Europe Daylight Time\n"
+"POT-Creation-Date: 2013-09-18 13:52+Paris, Madrid (heure d’été)\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: battle.py:153
+#: battle.py:155
 msgid ""
 "{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}\n"
 "{underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} {}\n"
@@ -24,59 +24,67 @@ msgid ""
 "ship.{}\n"
 msgstr ""
 
-#: battle.py:164
+#: battle.py:168
 msgid ""
 "HIT! %s took %d points of damage. {}\n"
 msgstr ""
 
-#: battle.py:168
+#: battle.py:172
 msgid ""
 "%s is destroyed.{}\n"
 msgstr ""
 
-#: battle.py:170
+#: battle.py:174
 msgid ""
 "Missed!{}\n"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "PLASMA"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "SONIC"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "URANIUM"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "WARP"
 msgstr ""
 
-#: entity.py:36
+#: entity.py:42
 msgid ""
 "\n"
 "{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}\n"
 "Energy type: %s {}\n"
 "{.tab_stops [120]}\n"
-"damage: %r{#x09}range: %d {}\n"
-"precision: %d%%{#x09}temperature: %d {}\n"
-"reliability: %d%%{}\n"
+"Damage: %r{#x09}Range: %d {}\n"
+"Precision: %d%%{#x09}Temperature: %d {}\n"
+"Reliability: %d%%{}\n"
 msgstr ""
 
-#: entity.py:73
+#: entity.py:95
 msgid ""
 "\n"
 "{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}\n"
-"{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %d\n"
+"{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s\n"
 msgstr ""
 
-#: entity.py:77
+#: entity.py:99
 msgid ""
 "\n"
 "{underline [255, 255, 255, 255]}Weapon{underline None}: {}\n"
 "%s"
+msgstr ""
+
+#: game_over.py:13
+msgid ""
+"{.align 'center'}\n"
+"{font_size 36}{color [255, 0, 0, 255]}Game Over {}\n"
+"{font_size 14}{color [200, 200, 200, 255]}Press any key to play again.\n"
+"        "
 msgstr ""
 

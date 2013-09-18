@@ -36,7 +36,7 @@
     "speed": 5,
     "hull": 5,
     "shield": [
-            {"pr":10, "energy_type":"PLASMA"}
+            {"pr":10, "energy_type":"SONIC"}
         ],
     "weapon": "Laser 1"
     },

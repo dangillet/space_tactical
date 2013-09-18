@@ -22,8 +22,8 @@ class Weapon(object):
     """
     Weapon with all its caracteristics. 
     """
-    #Damage Type
-    energy_type=[_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
+    # Damage Type provided here for translation.
+    [_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
     
     def __init__( self, weapon_type, weapon_range, precision, temp,
                   reliability, dmg_type, dmg):
@@ -43,10 +43,10 @@ class Weapon(object):
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
 Energy type: %s {}
 {.tab_stops [120]}
-damage: %r{#x09}range: %d {}
-precision: %d%%{#x09}temperature: %d {}
-reliability: %d%%{}
-""") % (self.weapon_type, self.energy_type, self.damage, 
+Damage: %r{#x09}Range: %d {}
+Precision: %d%%{#x09}Temperature: %d {}
+Reliability: %d%%{}
+""") % (self.weapon_type, _(self.energy_type), self.damage, 
              self.range, self.precision*100, self.temperature, self.reliability*100)
     
     def __repr__(self):
@@ -93,8 +93,8 @@ class Ship(cocos.sprite.Sprite):
         "Display the ship and its weapons in the formatted text style"
         shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
         s =  _("""
-{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
-{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
+{font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
+{font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
 """) % (self.ship_type, self.speed, self.hull, shield)
         s += _("""
 {underline [255, 255, 255, 255]}Weapon{underline None}: {}
@@ -185,8 +185,7 @@ class ShipFactory(object):
                      v['precision'],
                      v['temperature'],
                      v['reliability'],
-                     # Translate the energy type
-                     _(v['energy_type']),
+                     v['energy_type'],
                      v['damage'],
                     )
             # Read all the ships
@@ -194,7 +193,7 @@ class ShipFactory(object):
                 # Read the different shields on the ship
                 shields = {}
                 for shield in v['shield']:
-                    shields[_(shield['energy_type'])] = shield['pr']
+                    shields[shield['energy_type']] = shield['pr']
                 self.ships[v['ship_type']] = \
                     (v['image'].encode('utf-8'), # cocos.Sprite needs a str, not a unicode
                      v['ship_type'],

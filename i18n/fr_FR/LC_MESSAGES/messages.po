@@ -5,19 +5,19 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: SPACE TACTICAL\n"
-"POT-Creation-Date: 2013-09-16 16:20+W. Europe Daylight Time\n"
-"PO-Revision-Date: 2013-09-16 16:26+0100\n"
-"Last-Translator: \n"
+"POT-Creation-Date: 2013-09-18 13:52+Paris, Madrid (heure dété)\n"
+"PO-Revision-Date: 2013-09-18 13:56+0100\n"
+"Last-Translator: Daniel <dan.gillet737@gmail.com>\n"
 "Language-Team: Daniel\n"
+"Language: Français\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 "X-Generator: Poedit 1.5.7\n"
-"Language: Français\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 
-#: battle.py:153
+#: battle.py:155
 msgid ""
 "{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}\n"
 "{underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} "
@@ -34,67 +34,67 @@ msgstr ""
 "{color [255, 255, 255, 255]} tir sur le vaisseau de {color [0, 255, 0, "
 "255]}%s{color [255, 255, 255, 255]}{}\n"
 
-#: battle.py:164
+#: battle.py:168
 msgid "HIT! %s took %d points of damage. {}\n"
 msgstr "TOUCHE! %s prend %d points de dégâts. {}\n"
 
-#: battle.py:168
+#: battle.py:172
 msgid "%s is destroyed.{}\n"
 msgstr "%s est détruit.{}\n"
 
-#: battle.py:170
+#: battle.py:174
 msgid "Missed!{}\n"
 msgstr "Manqué!{}\n"
 
-#: entity.py:22
+#: entity.py:26
 msgid "PLASMA"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "SONIC"
 msgstr "SONIQUE"
 
-#: entity.py:22
+#: entity.py:26
 msgid "URANIUM"
 msgstr ""
 
-#: entity.py:22
+#: entity.py:26
 msgid "WARP"
 msgstr ""
 
-#: entity.py:36
+#: entity.py:42
 msgid ""
 "\n"
 "{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}\n"
 "Energy type: %s {}\n"
 "{.tab_stops [120]}\n"
-"damage: %r{#x09}range: %d {}\n"
-"precision: %d%%{#x09}temperature: %d {}\n"
-"reliability: %d%%{}\n"
+"Damage: %r{#x09}Range: %d {}\n"
+"Precision: %d%%{#x09}Temperature: %d {}\n"
+"Reliability: %d%%{}\n"
 msgstr ""
 "\n"
 "{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}\n"
 "Type d'énergie: %s {}\n"
 "{.tab_stops [120]}\n"
-"dégâts: %r{#x09}portée: %d {}\n"
-"précision: %d%%{#x09}température: %d {}\n"
-"fiabilité: %d%%{}\n"
+"Dégâts: %r{#x09}Portée: %d {}\n"
+"Précision: %d%%{#x09}Température: %d {}\n"
+"Fiabilité: %d%%{}\n"
 
-#: entity.py:73
+#: entity.py:95
 msgid ""
 "\n"
 "{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic "
 "True}%s{italic False}{}\n"
 "{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d"
-"{#x09}Hull: %d{#x09}Shield: %d\n"
+"{#x09}Hull: %d{#x09}Shield: %s\n"
 msgstr ""
 "\n"
-"{font_name 'Classic Robot'}{font_size 18}{color [255, 0, 0, 255]}{italic "
+"{font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic "
 "True}%s{italic False}{}\n"
-"{font_size 14}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Vitesse: %d"
-"{#x09}Coque: %d{#x09}Bouclier: %d\n"
+"{font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Vitesse: %d"
+"{#x09}Coque: %d{#x09}Bouclier: %s\n"
 
-#: entity.py:77
+#: entity.py:99
 msgid ""
 "\n"
 "{underline [255, 255, 255, 255]}Weapon{underline None}: {}\n"
@@ -103,3 +103,16 @@ msgstr ""
 "\n"
 "{underline [255, 255, 255, 255]}Arme{underline None}: {}\n"
 "%s"
+
+#: game_over.py:13
+msgid ""
+"{.align 'center'}\n"
+"{font_size 36}{color [255, 0, 0, 255]}Game Over {}\n"
+"{font_size 14}{color [200, 200, 200, 255]}Press any key to play again.\n"
+"        "
+msgstr ""
+"{.align 'center'}\n"
+"{font_size 36}{color [255, 0, 0, 255]}Game Over {}\n"
+"{font_size 14}{color [200, 200, 200, 255]}Pressez une touche pour "
+"recommencer.\n"
+"     "
