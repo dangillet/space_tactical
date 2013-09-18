@@ -4,12 +4,15 @@ import json
 
 import cocos
 from cocos.actions import CallFunc, CallFuncS
+from cocos.director import director
+
+from cocos.scenes import *
 
 from pyglet.window import key
 from pyglet.gl import *
 import pyglet
 
-import grid, entity, main, gui
+import grid, entity, main, gui, game_over
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
@@ -216,6 +219,10 @@ class StaticGamePhase(GamePhase):
         "Check at the end of a turn if all ships have played. If so, change player."
         if self.battle.current_player.turn_completed():
             self.battle.current_player = next(self.battle.players_turn)
+            # If there are no more ships in the fleet, it's game over.
+            if not self.battle.current_player.fleet:
+                game_over_scene = cocos.scene.Scene(game_over.GameOver())
+                director.replace(FadeBLTransition(game_over_scene, duration = 2))
             self.battle.current_player.reset_ships_turn()
             self.battle_grid.highlight_player(self.battle.current_player)
 

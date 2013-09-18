@@ -143,7 +143,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # How fast we can scroll
         self.scroller.fastness = 700
         w, h = director.get_window_size()
-        #self.focus_position = eu.Vector2(self.scroller.restricted_fx, self.scroller.restricted_fy)
     
     def draw(self, *args, **kwargs):
         glPushMatrix()
