@@ -18,13 +18,22 @@ class Damage(object):
     def roll(self):
         return random.randint(self.min, self.max)
 
+class EnergyType(object):
+    "Class holding the different energy types."
+    # Damage Type provided here for translation.
+    [_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
+    
+    names = ["URANIUM", "PLASMA", "SONIC", "WARP"]
+    
+    @classmethod
+    def name(cls, index):
+        "Returns the translated energy_type name"
+        return _(cls.names[index])
+    
 class Weapon(object):
     """
     Weapon with all its caracteristics. 
     """
-    # Damage Type provided here for translation.
-    [_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
-    
     def __init__( self, weapon_type, weapon_range, precision, temp,
                   reliability, dmg_type, dmg):
         "dmg is a list with min and max values."
@@ -34,7 +43,7 @@ class Weapon(object):
         self.precision = precision
         self.temperature = temp
         self.reliability = reliability
-        self.energy_type = dmg_type
+        self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
     
     def show(self):
@@ -46,7 +55,7 @@ Energy type: %s {}
 Damage: %r{#x09}Range: %d {}
 Precision: %d%%{#x09}Temperature: %d {}
 Reliability: %d%%{}
-""") % (self.weapon_type, _(self.energy_type), self.damage, 
+""") % (self.weapon_type, EnergyType.name(self.energy_type), self.damage, 
              self.range, self.precision*100, self.temperature, self.reliability*100)
     
     def __repr__(self):
@@ -56,7 +65,7 @@ Energy type: %s
 damage: %r\trange: %d
 precision: %d%%\ttemperature: %d
 reliability: %d%%
-""" % (self.weapon_type, self.energy_type, self.damage, 
+""" % (self.weapon_type, EnergyType.names[self.energy_type], self.damage, 
              self.range, self.precision*100, self.temperature, self.reliability*100)
 
     def hit(self):
@@ -82,6 +91,7 @@ class Ship(cocos.sprite.Sprite):
         self.ship_type = ship_type
         self.speed = speed
         self.hull = hull
+        # shield = {energy_idx:protection}
         self.shield = shield
         self.add_weapon(weapon)
         
@@ -91,7 +101,7 @@ class Ship(cocos.sprite.Sprite):
     
     def show(self):
         "Display the ship and its weapons in the formatted text style"
-        shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
+        shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems()])
         s =  _("""
 {font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
 {font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
@@ -102,7 +112,7 @@ class Ship(cocos.sprite.Sprite):
         return s
     
     def __repr__(self):
-        shield = " - ".join(["%d/%s" % (pr, en_type) for en_type, pr in self.shield.iteritems()])
+        shield = " - ".join(["%d/%s" % (pr, EnergyType.names[en_idx]) for en_idx, pr in self.shield.iteritems()])
         s = """
 %s
 Speed: %d\tHull: %d\tShield: %s
@@ -185,7 +195,7 @@ class ShipFactory(object):
                      v['precision'],
                      v['temperature'],
                      v['reliability'],
-                     v['energy_type'],
+                     EnergyType.names.index(v['energy_type']), # The index of the energy type in the list of energies
                      v['damage'],
                     )
             # Read all the ships
@@ -193,7 +203,8 @@ class ShipFactory(object):
                 # Read the different shields on the ship
                 shields = {}
                 for shield in v['shield']:
-                    shields[shield['energy_type']] = shield['pr']
+                    energy_idx = EnergyType.names.index(shield['energy_type'])
+                    shields[energy_idx] = shield['pr']
                 self.ships[v['ship_type']] = \
                     (v['image'].encode('utf-8'), # cocos.Sprite needs a str, not a unicode
                      v['ship_type'],
