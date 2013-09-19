@@ -304,7 +304,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
             # Do not look for the sprite_batch which contains only obstacles
             if isinstance(child, cocos.batch.BatchNode): continue
             if child.player != current_player \
-            and self.distance(ship, child) <= ship.weapon.range \
+            and self.distance(ship, child) <= ship.weapons[ship.weapon_idx].range \
             and self.clear_los(ship, child):
                 targets.append(child)
         return targets

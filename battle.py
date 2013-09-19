@@ -117,7 +117,7 @@ class Battle(cocos.layer.Layer):
         if not self.selected.move_completed:
             self.show_reachable_cells()
         # Get targets in range if ship didn't attack yet
-        if not self.selected.attack_completed:
+        if not self.selected.attack_completed and self.selected.weapon_idx is not None:
             self.show_targets()
     
     def show_reachable_cells(self):
@@ -158,9 +158,13 @@ class Battle(cocos.layer.Layer):
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
 """) % (attacker.player.name, defender.player.name)
-        weapon = attacker.weapon
+        weapon = attacker.weapons[attacker.weapon_idx]
         weapon.temperature += weapon.heating
-        if weapon.hit():
+        if weapon.fumble():
+            msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
+            weapon.is_inop = True
+            attacker.weapon_idx = None
+        elif weapon.hit():
             # If our shield is against the weapon energy type, use it
             protection = defender.shield.get(weapon.energy_type, 0)
             # Roll damage, but take min 0 damage if shield is greater than dmg
@@ -271,10 +275,11 @@ class ShipSelected(StaticGamePhase):
                     self.battle.change_game_phase(Idle(self.battle))
             # If we clicked on a target, attack it.
             elif self.battle.targets is not None and entity in self.battle.targets:
-                if self.selected.weapon.temperature + self.selected.weapon.heating > 100:
+                weapon = self.selected.weapons[self.selected.weapon_idx]
+                if weapon.temperature + weapon.heating > 100:
                     msg = _("""{color [255, 0, 0, 255]}
 Cannot fire with %s. It's overheating.
-""") % (self.selected.weapon.weapon_type)
+""") % (weapon.weapon_type)
                     self.battle.log_info.prepend_text(msg)
                 else:
                     self.battle.push_game_phase(Attack(self.battle, entity))

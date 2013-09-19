@@ -47,6 +47,7 @@ class Weapon(object):
         self.reliability = reliability
         self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
+        self.is_inop = False
     
     def show(self):
         "Display the weapon in the formatted text style"
@@ -72,8 +73,11 @@ Reliability: %d%%
 
     def hit(self):
         "Returns True if the weapon hit."
-        self.rounds_last_used = 0
         return random.random() <= self.precision
+    
+    def fumble(self):
+        "Returns True if the weapon jammed."
+        return random.random() > self.reliability
     
     def reset_turn(self):
         self.temperature = max(0, self.temperature - self.cooldown)
@@ -95,6 +99,8 @@ class Ship(cocos.sprite.Sprite):
         self.hull = hull
         # shield = {energy_idx:protection}
         self.shield = shield
+        self.weapons = []
+        self.weapon_idx = None
         self.add_weapon(weapon)
         
         self.turn_completed = False
@@ -108,9 +114,10 @@ class Ship(cocos.sprite.Sprite):
 {font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
 {font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
 """) % (self.ship_type, self.speed, self.hull, shield)
-        s += _("""
+        if self.weapon_idx is not None:
+            s += _("""
 {underline [255, 255, 255, 255]}Weapon{underline None}: {}
-%s""") % (self.weapon.show())
+%s""") % (self.weapons[self.weapon_idx].show())
         return s
     
     def __repr__(self):
@@ -119,21 +126,25 @@ class Ship(cocos.sprite.Sprite):
 %s
 Speed: %d\tHull: %d\tShield: %s
 """ % (self.ship_type, self.speed, self.hull, shield)
-        s += """
-Weapon:
-%s""" % (self.weapon)
+        if self.weapon_idx is not None:
+            s += """
+    Weapon:
+    %s""" % (self.weapons[self.weapon_idx])
         return s
         
-    def add_weapon(self, weapon):
+    def add_weapon(self, weapon, select=True):
         "Add a weapon to the ship"
-        self.weapon = weapon
-        self.weapon.ship = self
+        weapon.ship = self
+        self.weapons.append(weapon)
+        if select:
+            self.weapon_idx = len(self.weapons)-1
     
     def reset_turn(self):
         self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
-        self.weapon.reset_turn()
+        for weapon in self.weapons:
+            weapon.reset_turn()
     
 class Player(object):
     def __init__(self, name):
