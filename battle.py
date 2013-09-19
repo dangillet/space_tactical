@@ -153,12 +153,13 @@ class Battle(cocos.layer.Layer):
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
         msg = _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
-{underline [255, 0, 0, 255]}{bold True}ATTACK{bold False}{underline None} {}
+{bold True}ATTACK{bold False} {}
 {color [0, 255, 0, 255]}%s
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
 """) % (attacker.player.name, defender.player.name)
         weapon = attacker.weapon
+        weapon.temperature += weapon.heating
         if weapon.hit():
             # If our shield is against the weapon energy type, use it
             protection = defender.shield.get(weapon.energy_type, 0)
@@ -270,7 +271,13 @@ class ShipSelected(StaticGamePhase):
                     self.battle.change_game_phase(Idle(self.battle))
             # If we clicked on a target, attack it.
             elif self.battle.targets is not None and entity in self.battle.targets:
-                self.battle.push_game_phase(Attack(self.battle, entity))
+                if self.selected.weapon.temperature + self.selected.weapon.heating > 100:
+                    msg = _("""{color [255, 0, 0, 255]}
+Cannot fire with %s. It's overheating.
+""") % (self.selected.weapon.weapon_type)
+                    self.battle.log_info.prepend_text(msg)
+                else:
+                    self.battle.push_game_phase(Attack(self.battle, entity))
             # Otherwise display info on this ship
             else:
                 self.battle.ship_info.display(entity.show())
@@ -301,6 +308,7 @@ class Attack(GamePhase):
     def on_exit(self):
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
+        self.battle.ship_info.display(self.battle.selected.show())
         
 
 class Move(GamePhase):

@@ -34,14 +34,16 @@ class Weapon(object):
     """
     Weapon with all its caracteristics. 
     """
-    def __init__( self, weapon_type, weapon_range, precision, temp,
+    def __init__( self, weapon_type, weapon_range, precision, heating, cooldown,
                   reliability, dmg_type, dmg):
         "dmg is a list with min and max values."
         self.ship = None
         self.weapon_type = weapon_type
         self.range = weapon_range
         self.precision = precision
-        self.temperature = temp
+        self.heating = heating
+        self.cooldown = cooldown
+        self.temperature = 0
         self.reliability = reliability
         self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
@@ -50,23 +52,23 @@ class Weapon(object):
         "Display the weapon in the formatted text style"
         return _("""
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
-Energy type: %s {}
-{.tab_stops [120]}
-Damage: %r{#x09}Range: %d {}
-Precision: %d%%{#x09}Temperature: %d {}
+{.tab_stops [150]}
+Energy type: %s{#x09}Range: %d{}
+Precision: %d%%{#x09}Damage: %r {}
+Temperature: %d{#x09}Heating: %d {}
 Reliability: %d%%{}
-""") % (self.weapon_type, EnergyType.name(self.energy_type), self.damage, 
-             self.range, self.precision*100, self.temperature, self.reliability*100)
+""") % (self.weapon_type, EnergyType.name(self.energy_type), self.range,
+        self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
     
     def __repr__(self):
         return """
 %s
-Energy type: %s
-damage: %r\trange: %d
-precision: %d%%\ttemperature: %d
-reliability: %d%%
-""" % (self.weapon_type, EnergyType.names[self.energy_type], self.damage, 
-             self.range, self.precision*100, self.temperature, self.reliability*100)
+Energy type: %s\tRange: %d
+Precision: %d%%\tDamage: %r
+Temperature: %d\tHeating: %d
+Reliability: %d%%
+""" % (self.weapon_type, EnergyType.name(self.energy_type), self.range,
+        self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
 
     def hit(self):
         "Returns True if the weapon hit."
@@ -74,7 +76,7 @@ reliability: %d%%
         return random.random() <= self.precision
     
     def reset_turn(self):
-        pass
+        self.temperature = max(0, self.temperature - self.cooldown)
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, speed, hull,
@@ -193,7 +195,8 @@ class ShipFactory(object):
                     (v['weapon_type'],
                      v['range'],
                      v['precision'],
-                     v['temperature'],
+                     v['heating'],
+                     v['cooldown'],
                      v['reliability'],
                      EnergyType.names.index(v['energy_type']), # The index of the energy type in the list of energies
                      v['damage'],

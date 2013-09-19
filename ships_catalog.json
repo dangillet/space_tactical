@@ -4,7 +4,8 @@
       "weapon_type": "Laser 1",
       "range": 5,
       "precision": 0.8,
-      "temperature": 10,
+      "heating": 10,
+      "cooldown": 10,
       "reliability": 1.0,
       "energy_type": "PLASMA",
       "damage": [5,7]
@@ -13,7 +14,8 @@
       "weapon_type": "Laser 2",
       "range": 10,
       "precision": 0.6,
-      "temperature": 20,
+      "heating": 20,
+      "cooldown": 10,
       "reliability": 0.9,
       "energy_type": "URANIUM",
       "damage": [10,15]
@@ -22,7 +24,8 @@
       "weapon_type": "Laser 3",
       "range": 15,
       "precision": 0.5,
-      "temperature": 20,
+      "heating": 70,
+      "cooldown": 10,
       "reliability": 0.9,
       "energy_type": "SONIC",
       "damage": [15,20]
