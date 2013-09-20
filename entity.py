@@ -1,5 +1,9 @@
 import random, json
+
 import cocos
+
+from pyglet import event
+import pyglet.text as text
 
 import main
 
@@ -30,7 +34,7 @@ class EnergyType(object):
         "Returns the translated energy_type name"
         return _(cls.names[index])
     
-class Weapon(object):
+class Weapon(event.EventDispatcher):
     """
     Weapon with all its caracteristics. 
     """
@@ -49,7 +53,7 @@ class Weapon(object):
         self.damage = Damage(dmg[0], dmg[1])
         self.is_inop = False
     
-    def show(self):
+    def display(self):
         "Display the weapon in the formatted text style"
         return _("""
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
@@ -77,10 +81,19 @@ Reliability: %d%%
     
     def fumble(self):
         "Returns True if the weapon jammed."
-        return random.random() > self.reliability
+        if random.random() > self.reliability:
+            self.is_inop = True
+            return True
+        return False
+    
+    def fire(self):
+        self.temperature += self.heating
+        self.dispatch_event("on_weapon_change")
     
     def reset_turn(self):
         self.temperature = max(0, self.temperature - self.cooldown)
+
+Weapon.register_event_type("on_weapon_change")
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, speed, hull,
@@ -106,8 +119,9 @@ class Ship(cocos.sprite.Sprite):
         self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
+
     
-    def show(self):
+    def display(self):
         "Display the ship and its weapons in the formatted text style"
         shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems()])
         s =  _("""
@@ -117,7 +131,7 @@ class Ship(cocos.sprite.Sprite):
         if self.weapon_idx is not None:
             s += _("""
 {underline [255, 255, 255, 255]}Weapon{underline None}: {}
-%s""") % (self.weapons[self.weapon_idx].show())
+%s""") % (self.weapons[self.weapon_idx].display())
         return s
     
     def __repr__(self):
@@ -136,9 +150,13 @@ Speed: %d\tHull: %d\tShield: %s
         "Add a weapon to the ship"
         weapon.ship = self
         self.weapons.append(weapon)
+        weapon.push_handlers(self)
         if select:
             self.weapon_idx = len(self.weapons)-1
     
+    def on_weapon_change(self):
+        self.dispatch_event("on_change")
+
     def reset_turn(self):
         self.turn_completed = False
         self.move_completed = False
@@ -146,6 +164,36 @@ Speed: %d\tHull: %d\tShield: %s
         for weapon in self.weapons:
             weapon.reset_turn()
     
+    def attack(self, defender):
+        weapon = self.weapons[self.weapon_idx]
+        weapon.fire()
+        if weapon.fumble():
+            self.weapon_idx = None
+            self.dispatch_event("on_weapon_jammed", weapon)
+        elif weapon.hit():
+            dmg = weapon.damage.roll()
+            defender.take_damage(dmg, weapon.energy_type)
+        else:
+            self.dispatch_event("on_missed")
+            
+    
+    def take_damage(self, damage, energy_type):
+        # If our shield is against the weapon energy type, use it
+        protection = self.shield.get(energy_type, 0)
+        # Take min 0 damage if shield is greater than dmg
+        damage = max(0, damage - protection)
+        self.hull -= damage
+        self.dispatch_event("on_damage", self, damage)
+        if self.hull <= 0:
+            self.dispatch_event("on_destroyed", self)
+            self.player.destroy_ship(self)
+
+Ship.register_event_type("on_change")
+Ship.register_event_type("on_weapon_jammed")
+Ship.register_event_type("on_damage")
+Ship.register_event_type("on_destroyed")
+Ship.register_event_type("on_missed")
+
 class Player(object):
     def __init__(self, name):
         """Initialize the Player

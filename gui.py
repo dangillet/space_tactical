@@ -32,6 +32,8 @@ class InfoLayer(cocos.layer.ColorLayer):
                                                                     , height = self.info_h
                                                                     , multiline=True)
         self.info_layer.x, self.info_layer.y = PADDING, PADDING
+        self.model = None
+        self.bg_flip = False
 
     def on_enter(self):
         super(InfoLayer, self).on_enter()
@@ -57,6 +59,27 @@ class InfoLayer(cocos.layer.ColorLayer):
         self.info_layer.draw()
         glPopMatrix()
 
+    def update(self):
+        self.info_layer.begin_update()
+        if self.model is None:
+            self.info_layer.document = text.decode_attributed('')
+        else:
+            self.info_layer.document = text.decode_attributed(self.model.display())
+        self.info_layer.end_update()
+    
+    def set_model(self, model):
+        if self.model is not None:
+            self.model.pop_handlers()
+        self.model = model
+        model.push_handlers(self)
+        self.update()
+    
+    def remove_model(self):
+        if self.model is not None:
+            self.model.pop_handlers()
+            self.model = None
+            self.update()
+    
     def display(self, txt):
         self.document = text.decode_attributed(txt)
         self.info_layer = text.layout.IncrementalTextLayout(self.document, width= self.info_w
@@ -79,7 +102,13 @@ class InfoLayer(cocos.layer.ColorLayer):
     
     def prepend_text(self, formatted_text):
         "Preprends formatted text to the document"
-        document = text.decode_attributed(formatted_text + "\n")
+        formatted_text += "{}\n"
+        if self.bg_flip is True:
+            formatted_text = "{background_color [20, 20, 20, 255]}" + formatted_text
+        else:
+            formatted_text = "{background_color [50, 50, 50, 255]}" + formatted_text
+        self.bg_flip = not self.bg_flip
+        document = text.decode_attributed(formatted_text)
         self.document.insert_text(0, document.text)
         
         for attribute, runlist in document._style_runs.iteritems():

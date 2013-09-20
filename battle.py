@@ -66,6 +66,7 @@ class Battle(cocos.layer.Layer):
                     for _ in range(quantity):
                         ship = self.ships_factory.create_ship(ship_type)
                         ship.scale = float(grid.CELL_WIDTH) / ship.width
+                        ship.push_handlers(self)
                         player.add_ship(ship)
             self.battle_grid = grid.GridLayer(data['battlemap'])
             self.scroller = cocos.layer.ScrollingManager(ViewPort())
@@ -149,6 +150,7 @@ class Battle(cocos.layer.Layer):
             self.targets = []
     
     def attack_ship(self, attacker, defender):
+        "Attacker attacks the defender"
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
@@ -158,25 +160,29 @@ class Battle(cocos.layer.Layer):
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
 """) % (attacker.player.name, defender.player.name)
-        weapon = attacker.weapons[attacker.weapon_idx]
-        weapon.temperature += weapon.heating
-        if weapon.fumble():
-            msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
-            weapon.is_inop = True
-            attacker.weapon_idx = None
-        elif weapon.hit():
-            # If our shield is against the weapon energy type, use it
-            protection = defender.shield.get(weapon.energy_type, 0)
-            # Roll damage, but take min 0 damage if shield is greater than dmg
-            dmg = max(0, weapon.damage.roll() - protection)
-            defender.hull -= dmg
-            msg += _("HIT! %s took %d points of damage. {}\n") %(defender.ship_type, dmg)
-            if defender.hull <= 0:
-                self.battle_grid.remove(defender)
-                defender.player.destroy_ship(defender)
-                msg += _("%s is destroyed.{}\n") %(defender.ship_type)
-        else:
-            msg += _("Missed!{}\n")
+        self.log_info.prepend_text(msg)
+        
+        attacker.attack(defender)
+    
+    def on_change(self):
+        self.ship_info.update()
+    
+    def on_weapon_jammed(self, weapon):
+        msg = _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
+        self.log_info.prepend_text(msg)
+        self.ship_info.update()
+    
+    def on_damage(self, ship, dmg):
+        msg = _("HIT! %s took %d points of damage. {}\n") %(ship.ship_type, dmg)
+        self.log_info.prepend_text(msg)
+    
+    def on_destroyed(self, ship):
+        msg = _("%s is destroyed.{}\n") %(ship.ship_type)
+        self.log_info.prepend_text(msg)
+        self.battle_grid.remove(ship)
+            
+    def on_missed(self):
+        msg = _("Missed!{}\n")
         self.log_info.prepend_text(msg)
     
     def move_ship(self, ship, i, j):
@@ -236,7 +242,7 @@ class Idle(StaticGamePhase):
         super(Idle, self).__init__(battle)
     
     def on_enter(self):
-        self.battle.ship_info.display('')
+        self.battle.ship_info.remove_model()
         
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
@@ -245,7 +251,7 @@ class Idle(StaticGamePhase):
                 self.battle.selected = entity
                 self.battle.change_game_phase(ShipSelected(self.battle))
             else:
-                self.battle.ship_info.display(entity.show())
+                self.battle.ship_info.set_model(entity)
 
 class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
@@ -256,7 +262,7 @@ class ShipSelected(StaticGamePhase):
         # We keep a reference to the selected ship, so if we change ship
         # We can clear the "old" selected ship in the on_exit method.
         self.selected = self.battle.selected
-        self.battle.ship_info.display(self.selected.show())
+        self.battle.ship_info.set_model(self.selected)
         
     def on_mouse_press(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
@@ -285,7 +291,7 @@ Cannot fire with %s. It's overheating.
                     self.battle.push_game_phase(Attack(self.battle, entity))
             # Otherwise display info on this ship
             else:
-                self.battle.ship_info.display(entity.show())
+                self.battle.ship_info.set_model(entity)
         
 
         # If we clicked on our selected ship or in an empy cell, deselect the ship.
@@ -313,7 +319,6 @@ class Attack(GamePhase):
     def on_exit(self):
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
-        self.battle.ship_info.display(self.battle.selected.show())
         
 
 class Move(GamePhase):
