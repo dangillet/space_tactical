@@ -41,7 +41,7 @@
     "shield": [
             {"pr":10, "energy_type":"SONIC"}
         ],
-    "weapon": "Laser 1"
+    "weapons": ["Laser 1"]
     },
     
     {
@@ -52,7 +52,7 @@
     "shield": [
             {"pr":20, "energy_type":"PLASMA"}
         ],
-    "weapon": "Laser 3"
+    "weapons": ["Laser 1", "Laser 3"]
     },
 
     {
@@ -64,7 +64,7 @@
             {"pr":20, "energy_type":"URANIUM"},
             {"pr":10, "energy_type":"PLASMA"}
         ],
-    "weapon": "Laser 2"
+    "weapons": ["Laser 2", "Laser 3"]
     }
   ]
 }

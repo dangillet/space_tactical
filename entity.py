@@ -97,7 +97,7 @@ Weapon.register_event_type("on_weapon_change")
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, speed, hull,
-                shield, weapon):
+                shield, weapons):
         """
             Initialize the Ship
             player: Player
@@ -114,7 +114,8 @@ class Ship(cocos.sprite.Sprite):
         self.shield = shield
         self.weapons = []
         self.weapon_idx = None
-        self.add_weapon(weapon)
+        for weapon in weapons:
+            self.add_weapon(weapon, weapon is weapons[-1])
         
         self.turn_completed = False
         self.move_completed = False
@@ -273,17 +274,18 @@ class ShipFactory(object):
                      v['speed'],
                      v['hull'],
                      shields,
-                     v['weapon']
+                     v['weapons']
                     )
     
     def create_ship(self, ship_type):
         "Create a new ship of type ship_type"
-        # The 5th element in the ship definition is the weapon
-        weapon_type = self.ships[ship_type][5]
-        weapon_args = self.weapons[weapon_type]
-        weapon = Weapon(*weapon_args)
+        # The 5th element in the ship definition is the list of weapons
+        weapons = []
+        for weapon_type in self.ships[ship_type][5]:
+            weapon_args = self.weapons[weapon_type]
+            weapons.append(Weapon(*weapon_args))
         # Take all args except the last, and replace it with the constructed weapon
-        return Ship(*self.ships[ship_type][:-1], weapon=weapon)
+        return Ship(*self.ships[ship_type][:-1], weapons=weapons)
     
 if __name__ == '__main__':
     from cocos.director import director
