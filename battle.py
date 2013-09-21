@@ -37,6 +37,7 @@ class Battle(cocos.layer.Layer):
             (main.SCREEN_W - INFO_WIDTH + MARGIN, SHIP_INFO_HEIGHT + 2*MARGIN),
             INFO_WIDTH - 2*MARGIN, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*MARGIN)
         self.add(self.log_info, z=5)
+        self.msg = ''
         self.load_battlemap()
 
         # Player list
@@ -154,13 +155,12 @@ class Battle(cocos.layer.Layer):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
-        msg = _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
+        self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 {bold True}ATTACK{bold False} {}
 {color [0, 255, 0, 255]}%s
 {color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 ship.{}
 """) % (attacker.player.name, defender.player.name)
-        self.log_info.prepend_text(msg)
         
         attacker.attack(defender)
     
@@ -168,22 +168,18 @@ ship.{}
         self.ship_info.update()
     
     def on_weapon_jammed(self, weapon):
-        msg = _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
-        self.log_info.prepend_text(msg)
+        self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
         self.ship_info.update()
     
     def on_damage(self, ship, dmg):
-        msg = _("HIT! %s took %d points of damage. {}\n") %(ship.ship_type, dmg)
-        self.log_info.prepend_text(msg)
+        self.msg += _("HIT! %s took %d points of damage. {}\n") % (ship.ship_type, dmg)
     
     def on_destroyed(self, ship):
-        msg = _("%s is destroyed.{}\n") %(ship.ship_type)
-        self.log_info.prepend_text(msg)
+        self.msg += _("%s is destroyed.{}\n") %(ship.ship_type)
         self.battle_grid.remove(ship)
             
     def on_missed(self):
-        msg = _("Missed!{}\n")
-        self.log_info.prepend_text(msg)
+        self.msg += _("Missed!{}\n")
     
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
@@ -208,7 +204,10 @@ class GamePhase(object):
         pass
         
     def on_exit(self):
-        pass
+        "All game phase, when they exit, display the buffered message."
+        if self.battle.msg:
+            self.battle.log_info.prepend_text(self.battle.msg)
+            self.battle.msg = ""
 
 class StaticGamePhase(GamePhase):
     """
@@ -303,6 +302,7 @@ Cannot fire with %s. It's overheating.
         super(ShipSelected, self).on_end_of_round()
 
     def on_exit(self):
+        super(StaticGamePhase, self).on_exit()
         self.battle.deselect_ship(self.selected)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
@@ -317,6 +317,7 @@ class Attack(GamePhase):
         self.battle.pop_game_phase()
     
     def on_exit(self):
+        super(Attack, self).on_exit()
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
         
@@ -335,5 +336,6 @@ class Move(GamePhase):
         self.battle.pop_game_phase()
     
     def on_exit(self):
+        super(Move, self).on_exit()
         self.battle.selected.move_completed = True
         self.battle.select_ship()

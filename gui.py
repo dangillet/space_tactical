@@ -33,7 +33,6 @@ class InfoLayer(cocos.layer.ColorLayer):
                                                                     , multiline=True)
         self.info_layer.x, self.info_layer.y = PADDING, PADDING
         self.model = None
-        self.bg_flip = False
 
     def on_enter(self):
         super(InfoLayer, self).on_enter()
@@ -103,11 +102,6 @@ class InfoLayer(cocos.layer.ColorLayer):
     def prepend_text(self, formatted_text):
         "Preprends formatted text to the document"
         formatted_text += "{}\n"
-        if self.bg_flip is True:
-            formatted_text = "{background_color [20, 20, 20, 255]}" + formatted_text
-        else:
-            formatted_text = "{background_color [50, 50, 50, 255]}" + formatted_text
-        self.bg_flip = not self.bg_flip
         document = text.decode_attributed(formatted_text)
         self.document.insert_text(0, document.text)
         
