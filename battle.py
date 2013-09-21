@@ -16,12 +16,13 @@ import grid, entity, main, gui, game_over
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
+MENU_BUTTON_HEIGHT = 50
 MARGIN = 10
 
 class ViewPort(object):
-    position = (0, 0)
+    position = (0, MENU_BUTTON_HEIGHT)
     width = main.SCREEN_W - INFO_WIDTH - position[0]
-    height = main.SCREEN_H
+    height = main.SCREEN_H-MENU_BUTTON_HEIGHT
     
 class Battle(cocos.layer.Layer):
     def __init__(self):
@@ -88,7 +89,7 @@ class Battle(cocos.layer.Layer):
         "Pop the last state of the game."
         self.game_phase.pop().on_exit()
         
-    def on_mouse_press(self, x, y, button, modifiers):
+    def on_mouse_release(self, x, y, button, modifiers):
         """
         The game logic happens in the state machine.
         The behaviour of mouse clicks depends on the current game_phase
@@ -100,7 +101,7 @@ class Battle(cocos.layer.Layer):
         i, j = self.battle_grid.from_pixel_to_grid(x, y)
         if i is None or j is None: return
         
-        self.game_phase[-1].on_mouse_press(i, j, x, y)
+        self.game_phase[-1].on_mouse_release(i, j, x, y)
 
     def on_key_release(self, symbol, modifiers):
         # With Space bar, end of turn
@@ -167,6 +168,11 @@ ship.{}
     def on_change(self):
         self.ship_info.update()
     
+    def on_weapon_change(self):
+        self.ship_info.update()
+        self.deselect_targets()
+        self.show_targets()
+    
     def on_weapon_jammed(self, weapon):
         self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
         self.ship_info.update()
@@ -194,7 +200,7 @@ class GamePhase(object):
     def on_enter(self):
         pass
     
-    def on_mouse_press(self, i, j, x, y):
+    def on_mouse_release(self, i, j, x, y):
         pass
     
     def on_end_of_turn(self):
@@ -243,7 +249,7 @@ class Idle(StaticGamePhase):
     def on_enter(self):
         self.battle.ship_info.remove_model()
         
-    def on_mouse_press(self, i, j, x, y):
+    def on_mouse_release(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
         if entity is not None:
             if entity.player == self.battle.current_player:
@@ -262,8 +268,9 @@ class ShipSelected(StaticGamePhase):
         # We can clear the "old" selected ship in the on_exit method.
         self.selected = self.battle.selected
         self.battle.ship_info.set_model(self.selected)
+        self.battle.add(gui.WeaponMenu(self.selected), z=5, name="weapon_menu")
         
-    def on_mouse_press(self, i, j, x, y):
+    def on_mouse_release(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
         # If we clicked on a reachable cell, move the ship there
         if self.battle.reachable_cells and (i,j) in self.battle.reachable_cells:
@@ -306,6 +313,8 @@ Cannot fire with %s. It's overheating.
         self.battle.deselect_ship(self.selected)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
+        self.battle.remove("weapon_menu")
+        
 
 class Attack(GamePhase):
     def __init__(self, battle, ennemy):
@@ -320,7 +329,6 @@ class Attack(GamePhase):
         super(Attack, self).on_exit()
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
-        
 
 class Move(GamePhase):
     def __init__(self, battle, i, j):

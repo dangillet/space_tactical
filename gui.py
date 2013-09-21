@@ -1,5 +1,6 @@
 import cocos
 from cocos.director import director
+from cocos.menu import *
 
 import pyglet
 import pyglet.text as text
@@ -132,3 +133,28 @@ class ScrollableInfoLayer(InfoLayer):
         if x < sx or x > sx + self.info_w: return False
         if y < sy or y > sy + self.info_h: return False
         return True
+
+class WeaponMenu(Menu):
+    def __init__(self, ship):
+        super(WeaponMenu, self).__init__()
+        weapons = ship.weapons
+        l = []
+        for idx, weapon in enumerate(weapons):
+            l.append(MenuItem(weapon.weapon_type, ship.change_weapon, idx))
+        self.create_menu(l, zoom_in(), zoom_out())
+        self._select_item(ship.weapon_idx)
+        
+    def on_mouse_release( self, x, y, buttons, modifiers ):
+        super(WeaponMenu, self).on_mouse_release( x, y, buttons, modifiers )
+        
+    def on_key_press(self, symbol, modifiers):
+        return False
+    
+    def on_mouse_release( self, x, y, buttons, modifiers ):
+        (x,y) = director.get_virtual_coordinates(x,y)
+        if self.children[ self.selected_index ][1].is_inside_box(x,y):
+            self._activate_item()
+            return True
+        return False
+        
+        

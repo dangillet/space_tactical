@@ -34,7 +34,7 @@ class EnergyType(object):
         "Returns the translated energy_type name"
         return _(cls.names[index])
     
-class Weapon(event.EventDispatcher):
+class Weapon(object):
     """
     Weapon with all its caracteristics. 
     """
@@ -88,12 +88,9 @@ Reliability: %d%%
     
     def fire(self):
         self.temperature += self.heating
-        self.dispatch_event("on_weapon_change")
     
     def reset_turn(self):
         self.temperature = max(0, self.temperature - self.cooldown)
-
-Weapon.register_event_type("on_weapon_change")
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, speed, hull,
@@ -151,12 +148,12 @@ Speed: %d\tHull: %d\tShield: %s
         "Add a weapon to the ship"
         weapon.ship = self
         self.weapons.append(weapon)
-        weapon.push_handlers(self)
         if select:
             self.weapon_idx = len(self.weapons)-1
     
-    def on_weapon_change(self):
-        self.dispatch_event("on_change")
+    def change_weapon(self, idx):
+        self.weapon_idx = idx
+        self.dispatch_event("on_weapon_change")
 
     def reset_turn(self):
         self.turn_completed = False
@@ -168,6 +165,7 @@ Speed: %d\tHull: %d\tShield: %s
     def attack(self, defender):
         weapon = self.weapons[self.weapon_idx]
         weapon.fire()
+        self.dispatch_event("on_change")
         if weapon.fumble():
             self.weapon_idx = None
             self.dispatch_event("on_weapon_jammed", weapon)
@@ -194,6 +192,7 @@ Ship.register_event_type("on_weapon_jammed")
 Ship.register_event_type("on_damage")
 Ship.register_event_type("on_destroyed")
 Ship.register_event_type("on_missed")
+Ship.register_event_type("on_weapon_change")
 
 class Player(object):
     def __init__(self, name):
