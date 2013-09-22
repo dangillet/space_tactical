@@ -172,7 +172,7 @@ class Ship(cocos.sprite.Sprite):
         self.speed = speed
         self.hull = hull
         # shield = {energy_idx:protection}
-        self.shield = shield
+        self.shield = shield.copy()
         self.weapons = []
         self.weapon_idx = None
         for weapon in weapons:
