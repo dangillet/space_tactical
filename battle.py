@@ -20,9 +20,9 @@ MENU_BUTTON_HEIGHT = 50
 MARGIN = 10
 
 class ViewPort(object):
-    position = (0, MENU_BUTTON_HEIGHT)
+    position = (0, 0)
     width = main.SCREEN_W - INFO_WIDTH - position[0]
-    height = main.SCREEN_H-MENU_BUTTON_HEIGHT
+    height = main.SCREEN_H
     
 class Battle(cocos.layer.Layer):
     def __init__(self):
@@ -268,7 +268,10 @@ class ShipSelected(StaticGamePhase):
         # We can clear the "old" selected ship in the on_exit method.
         self.selected = self.battle.selected
         self.battle.ship_info.set_model(self.selected)
-        self.battle.add(gui.WeaponMenu(self.selected), z=5, name="weapon_menu")
+        weapon_menu = gui.WeaponMenuLayer(self.selected,
+                                    main.SCREEN_W - INFO_WIDTH,
+                                    MENU_BUTTON_HEIGHT)
+        self.battle.add(weapon_menu, z=5, name="weapon_menu")
         
     def on_mouse_release(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)

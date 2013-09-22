@@ -6,7 +6,7 @@ import pyglet
 import pyglet.text as text
 from pyglet.gl import *
 
-BACKGROUND = (50, 50, 50, 255)
+BACKGROUND = (50, 50, 50, 200)
 PADDING = 10
 
 class DashedLine(pyglet.graphics.OrderedGroup):
@@ -134,16 +134,54 @@ class ScrollableInfoLayer(InfoLayer):
         if y < sy or y > sy + self.info_h: return False
         return True
 
+class WeaponMenuLayer(cocos.layer.ColorLayer):
+    def __init__(self, ship, width, height):
+        super(WeaponMenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
+        weapon_menu = WeaponMenu(ship)
+        self.add(weapon_menu, z=5)
+    
+
 class WeaponMenu(Menu):
     def __init__(self, ship):
         super(WeaponMenu, self).__init__()
+
+        self.menu_halign = LEFT
+        self.menu_valign = CENTER
+
+        #
+        # Menu font options
+        #
+
+        self.font_item= {
+            'font_name':'Classic Robot',
+            'font_size':20,
+            'bold':False,
+            'italic':False,
+            'anchor_y':'center',
+            'anchor_x':'left',
+            'color':(192,192,192,255),
+            'dpi':96,
+        }
+        self.font_item_selected = {
+            'font_name':'Classic Robot',
+            'font_size':20,
+            'bold':False,
+            'italic':False,
+            'anchor_y':'center',
+            'anchor_x':'left',
+            'color':(192,192,0,255),
+            'dpi':96,
+        }
+
+        self.title_height = 0
+        
         weapons = ship.weapons
         l = []
         for idx, weapon in enumerate(weapons):
             l.append(MenuItem(weapon.weapon_type, ship.change_weapon, idx))
-        self.create_menu(l, zoom_in(), zoom_out())
+        self.create_menu(l, layout_strategy=horizontalMenuLayout)
         self._select_item(ship.weapon_idx)
-        
+    
     def on_mouse_release( self, x, y, buttons, modifiers ):
         super(WeaponMenu, self).on_mouse_release( x, y, buttons, modifiers )
         
@@ -156,5 +194,16 @@ class WeaponMenu(Menu):
             self._activate_item()
             return True
         return False
+        
+def horizontalMenuLayout (menu):
+    pos_x = 20
+    pos_y = 25
+    for idx,i in enumerate( menu.children):
+        item = i[1]
+        item.transform_anchor_x = 0
+        item.generateWidgets (pos_x, pos_y, menu.font_item,
+                              menu.font_item_selected)
+        pos_x += item.get_item_width() + 20
+        
         
         
