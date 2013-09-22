@@ -33,8 +33,7 @@ def main():
     load_resource()
     my_battle = battle.Battle()
     main_scene = cocos.scene.Scene(my_battle)
-    
-    director.show_FPS = True
+
     director.run(main_scene)
 
 if __name__ == '__main__':

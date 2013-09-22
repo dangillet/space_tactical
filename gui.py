@@ -151,10 +151,21 @@ class WeaponMenu(Menu):
         #
         # Menu font options
         #
-
+        self.font_title = {
+            'text':'title',
+            'font_name':'Classic Robot',
+            'font_size':14,
+            'color':(192,192,192,255),
+            'bold':False,
+            'italic':False,
+            'anchor_y':'center',
+            'anchor_x':'center',
+            'dpi':96,
+            'x':0, 'y':0,
+        }
         self.font_item= {
             'font_name':'Classic Robot',
-            'font_size':20,
+            'font_size':12,
             'bold':False,
             'italic':False,
             'anchor_y':'center',
@@ -164,7 +175,7 @@ class WeaponMenu(Menu):
         }
         self.font_item_selected = {
             'font_name':'Classic Robot',
-            'font_size':20,
+            'font_size':12,
             'bold':False,
             'italic':False,
             'anchor_y':'center',
@@ -175,16 +186,14 @@ class WeaponMenu(Menu):
 
         self.title_height = 0
         
+        self.ship = ship
         weapons = ship.weapons
         l = []
         for idx, weapon in enumerate(weapons):
             l.append(MenuItem(weapon.weapon_type, ship.change_weapon, idx))
         self.create_menu(l, layout_strategy=horizontalMenuLayout)
-        self._select_item(ship.weapon_idx)
+        self._select_item(self.ship.weapon_idx)
     
-    def on_mouse_release( self, x, y, buttons, modifiers ):
-        super(WeaponMenu, self).on_mouse_release( x, y, buttons, modifiers )
-        
     def on_key_press(self, symbol, modifiers):
         return False
     
@@ -194,6 +203,15 @@ class WeaponMenu(Menu):
             self._activate_item()
             return True
         return False
+    
+    def on_mouse_motion( self, x, y, dx, dy ):
+        (x,y) = director.get_virtual_coordinates(x,y)
+        for idx,i in enumerate( self.children):
+            item = i[1]
+            if item.is_inside_box( x, y):
+                self._select_item( idx )
+                return
+        self._select_item(self.ship.weapon_idx)
         
 def horizontalMenuLayout (menu):
     pos_x = 20

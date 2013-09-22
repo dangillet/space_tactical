@@ -269,8 +269,9 @@ class ShipSelected(StaticGamePhase):
         self.selected = self.battle.selected
         self.battle.ship_info.set_model(self.selected)
         weapon_menu = gui.WeaponMenuLayer(self.selected,
-                                    main.SCREEN_W - INFO_WIDTH,
+                                    main.SCREEN_W - INFO_WIDTH - 2*MARGIN,
                                     MENU_BUTTON_HEIGHT)
+        weapon_menu.x = MARGIN
         self.battle.add(weapon_menu, z=5, name="weapon_menu")
         
     def on_mouse_release(self, i, j, x, y):
