@@ -18,6 +18,7 @@ INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
 MENU_BUTTON_HEIGHT = 50
 MARGIN = 10
+PROMPT = "{color [255,255,255,255]}>> {margin_left 25}"
 
 class ViewPort(object):
     position = (0, 0)
@@ -38,7 +39,7 @@ class Battle(cocos.layer.Layer):
             (main.SCREEN_W - INFO_WIDTH + MARGIN, SHIP_INFO_HEIGHT + 2*MARGIN),
             INFO_WIDTH - 2*MARGIN, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*MARGIN)
         self.add(self.log_info, z=5)
-        self.msg = ''
+        self.msg = PROMPT
         self.load_battlemap()
 
         # Player list
@@ -216,9 +217,9 @@ class GamePhase(object):
         
     def on_exit(self):
         "All game phase, when they exit, display the buffered message."
-        if self.battle.msg:
+        if self.battle.msg != PROMPT:
             self.battle.log_info.prepend_text(self.battle.msg)
-            self.battle.msg = ""
+            self.battle.msg = PROMPT
 
 class StaticGamePhase(GamePhase):
     """
