@@ -137,6 +137,7 @@ class ScrollableInfoLayer(InfoLayer):
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):
         super(MenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
+        self.ship = ship
         weapon_menu = WeaponMenu(ship)
         self.add(weapon_menu, z=5, name="weapon_menu")
         boost_menu = BoostMenu(ship)
@@ -146,17 +147,14 @@ class MenuLayer(cocos.layer.ColorLayer):
         boost_menu.x = x_offset
         self.add(boost_menu, z=5, name="boost_menu")
         
-    def on_boost_use(self):
-        boost_menu = self.get("boost_menu")
-        for idx, _ in enumerate(boost_menu.children):
-            boost_menu.disable(idx)
-    
-    def on_weapon_jammed(self, weapon):
-        weapon_menu = self.get("weapon_menu")
-        for idx, item in enumerate(weapon_menu.children):
-            if item[1].label == weapon.weapon_type:
-                weapon_menu.disable(idx)
-                break
+    def on_enter(self):
+        super(MenuLayer, self).on_enter()
+        self.ship.push_handlers(self.get("boost_menu"),
+                                self.get("weapon_menu"))
+        
+    def on_exit(self):
+        super(MenuLayer, self).on_exit()
+        self.ship.pop_handlers()
                 
         
     
@@ -176,7 +174,7 @@ class MenuItemDisableable (MenuItem):
         font_item_disabled['y'] = int(pos_y)
         font_item_disabled['text'] = self.label
         self.item_disabled = pyglet.text.Label(**font_item_disabled )
-        
+    
     def draw( self ):
         glPushMatrix()
         self.transform()
@@ -187,10 +185,11 @@ class MenuItemDisableable (MenuItem):
         else:
             self.item.draw()
         glPopMatrix()
-    
-class WeaponMenu(Menu):
+
+class ShipMenu(Menu):
+    "Base class for the menu of ship actions"
     def __init__(self, ship):
-        super(WeaponMenu, self).__init__()
+        super(ShipMenu, self).__init__()
 
         self.menu_halign = LEFT
         self.menu_valign = CENTER
@@ -240,115 +239,21 @@ class WeaponMenu(Menu):
             'color':(20,20,20,255),
             'dpi':96,
         }
-
-        self.title_height = 0
-        
         self.ship = ship
-        weapons = ship.weapons
-        l = []
-        for idx, weapon in enumerate(weapons):
-            l.append(MenuItemDisableable(weapon.weapon_type, ship.change_weapon, idx,
-                    disabled = weapon.is_inop))
-        self.create_menu(l, layout_strategy=horizontalMenuLayout)
-        self._select_item(self.ship.weapon_idx)
     
     def on_key_press(self, symbol, modifiers):
         return False
-    
-    def on_mouse_release( self, x, y, buttons, modifiers ):
-        (x,y) = director.get_virtual_coordinates(x,y)
-        if self.children[ self.selected_index ][1].is_inside_box(x,y) \
-            and not self.children[ self.selected_index ][1].is_disabled:
-            self._activate_item()
-            return True
-        return False
-    
-    def on_mouse_motion( self, x, y, dx, dy ):
-        (x,y) = director.get_virtual_coordinates(x,y)
-        for idx,i in enumerate( self.children):
-            item = i[1]
-            if item.is_inside_box( x, y) and not item.is_disabled:
-                self._select_item( idx )
-                return
-        #self._select_item(self.ship.weapon_idx)
-    
-    def disable(self, idx):
-        self.children[idx][1].is_disabled = True
-
-class BoostMenu(Menu):
-    def __init__(self, ship):
-        super(BoostMenu, self).__init__()
-
-        self.menu_halign = LEFT
-        self.menu_valign = CENTER
-
-        #
-        # Menu font options
-        #
-        self.font_title = {
-            'text':'title',
-            'font_name':'Classic Robot',
-            'font_size':14,
-            'color':(192,192,192,255),
-            'bold':False,
-            'italic':False,
-            'anchor_y':'center',
-            'anchor_x':'center',
-            'dpi':96,
-            'x':0, 'y':0,
-        }
-        self.font_item= {
-            'font_name':'Classic Robot',
-            'font_size':12,
-            'bold':False,
-            'italic':False,
-            'anchor_y':'center',
-            'anchor_x':'left',
-            'color':(192,192,192,255),
-            'dpi':96,
-        }
-        self.font_item_selected = {
-            'font_name':'Classic Robot',
-            'font_size':12,
-            'bold':False,
-            'italic':False,
-            'anchor_y':'center',
-            'anchor_x':'left',
-            'color':(192,192,0,255),
-            'dpi':96,
-        }
-        self.font_item_disabled = {
-            'font_name':'Classic Robot',
-            'font_size':12,
-            'bold':False,
-            'italic':False,
-            'anchor_y':'center',
-            'anchor_x':'left',
-            'color':(20,20,20,255),
-            'dpi':96,
-        }
-
-        self.title_height = 0
         
-        self.ship = ship
-        boosts = ship.boosts
-        l = []
-        for idx, boost in enumerate(boosts):
-            l.append(MenuItemDisableable(boost.name, ship.use_boost, idx, 
-                    disabled=ship.boost_used))
-        self.create_menu(l, layout_strategy=horizontalMenuLayout)
-        self._select_item(self.ship.weapon_idx)
-    
-    def on_key_press(self, symbol, modifiers):
-        return False
-    
     def on_mouse_release( self, x, y, buttons, modifiers ):
         (x,y) = director.get_virtual_coordinates(x,y)
         if self.children[ self.selected_index ][1].is_inside_box(x,y):
             self._activate_item()
             return True
         return False
-    
+        
+    def disable(self, idx):
+        self.children[idx][1].is_disabled = True
+        
     def on_mouse_motion( self, x, y, dx, dy ):
         (x,y) = director.get_virtual_coordinates(x,y)
         for idx,i in enumerate( self.children):
@@ -356,9 +261,42 @@ class BoostMenu(Menu):
             if item.is_inside_box( x, y) and not item.is_disabled:
                 self._select_item( idx )
                 break
-                
-    def disable(self, idx):
+        
+class WeaponMenu(ShipMenu):
+    "Menu for selecting the current weapon"
+    def __init__(self, ship):
+        super(WeaponMenu, self).__init__(ship)
+        weapons = ship.weapons
+        l = []
+        for idx, weapon in enumerate(weapons):
+            l.append(MenuItemDisableable(weapon.weapon_type, ship.change_weapon, idx,
+                    disabled = weapon.is_inop))
+        self.create_menu(l, layout_strategy=horizontalMenuLayout)
+        if self.ship.weapon_idx is not None:
+            self._select_item(self.ship.weapon_idx)
+    
+    def on_key_press(self, symbol, modifiers):
+        return False
+    
+    def on_weapon_jammed(self, weapon):
+        idx = self.ship.weapons.index(weapon)
         self.children[idx][1].is_disabled = True
+
+class BoostMenu(ShipMenu):
+    "Menu for selecting the boost"
+    def __init__(self, ship):
+        super(BoostMenu, self).__init__(ship)
+        boosts = ship.boosts
+        l = []
+        for idx, boost in enumerate(boosts):
+            item = MenuItemDisableable(boost.name, ship.use_boost, idx, 
+                    disabled=ship.boost_used)
+            l.append(item)
+        self.create_menu(l, layout_strategy=horizontalMenuLayout)
+    
+    def on_boost_use(self):
+        for _, item in self.children:
+            item.is_disabled = True
 
 def horizontalMenuLayout (menu):
     pos_x = 20
