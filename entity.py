@@ -59,6 +59,26 @@ class BoostSpeed(Boost):
         self.used = False
         self.ship.speed -= 2
 
+class BoostWeaponDamage(Boost):
+    def __init__(self, ship):
+        super(BoostWeaponDamage, self).__init__(ship)
+        self.used = False
+        self.name = _("Boost Weapon")
+    
+    def use(self):
+        self.used = True
+        self.weapon_idx = self.ship.weapon_idx
+        damage = self.ship.weapons[self.weapon_idx].damage
+        damage.min += 5
+        damage.max += 5
+        self.ship.dispatch_event("on_change")
+    
+    def reverse(self):
+        self.used = False
+        damage = self.ship.weapons[self.weapon_idx].damage
+        damage.min -= 5
+        damage.max -= 5
+
 class BoostShield(Boost):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
@@ -158,7 +178,8 @@ class Ship(cocos.sprite.Sprite):
         for weapon in weapons:
             self.add_weapon(weapon, weapon is weapons[-1])
         self.boosts = [BoostShield(self),
-                    BoostSpeed(self)]
+                    BoostSpeed(self),
+                    BoostWeaponDamage(self)]
         self.boost_used = False
         
         self.turn_completed = False
