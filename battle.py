@@ -176,8 +176,9 @@ ship.{}
     
     def on_speed_change(self):
         self.ship_info.update()
-        self.clear_reachable_cells()
-        self.show_reachable_cells()
+        if not self.selected.move_completed:
+            self.clear_reachable_cells()
+            self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
         self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
