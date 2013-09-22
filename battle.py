@@ -277,6 +277,7 @@ class ShipSelected(StaticGamePhase):
                                     main.SCREEN_W - INFO_WIDTH - 2*MARGIN,
                                     MENU_BUTTON_HEIGHT)
         ship_menu.x = MARGIN
+        self.selected.push_handlers(ship_menu)
         self.battle.add(ship_menu, z=5, name="ship_menu")
         
     def on_mouse_release(self, i, j, x, y):
@@ -322,6 +323,7 @@ Cannot fire with %s. It's overheating.
         self.battle.deselect_ship(self.selected)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
+        self.selected.pop_handlers()
         self.battle.remove("ship_menu")
         
 

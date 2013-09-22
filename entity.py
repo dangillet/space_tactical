@@ -48,6 +48,7 @@ class BoostSpeed(Boost):
     def __init__(self, ship):
         super(BoostSpeed, self).__init__(ship)
         self.used = False
+        self.name = _("Boost Speed")
     
     def use(self):
         self.used = True
@@ -62,6 +63,7 @@ class BoostShield(Boost):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
         self.used = False
+        self.name = _("Boost Shield")
     
     def use(self):
         self.used = True
@@ -204,6 +206,7 @@ Speed: %d\tHull: %d\tShield: %s
         if not self.boost_used:
             self.boosts[idx].use()
             self.boost_used = True
+            self.dispatch_event("on_boost_use")
             
     def reset_turn(self):
         self.turn_completed = False
@@ -247,6 +250,7 @@ Ship.register_event_type("on_destroyed")
 Ship.register_event_type("on_missed")
 Ship.register_event_type("on_weapon_change")
 Ship.register_event_type("on_speed_change")
+Ship.register_event_type("on_boost_use")
 
 class Player(object):
     def __init__(self, name):
