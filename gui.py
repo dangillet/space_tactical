@@ -134,9 +134,9 @@ class ScrollableInfoLayer(InfoLayer):
         if y < sy or y > sy + self.info_h: return False
         return True
 
-class WeaponMenuLayer(cocos.layer.ColorLayer):
+class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):
-        super(WeaponMenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
+        super(MenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
         weapon_menu = WeaponMenu(ship)
         self.add(weapon_menu, z=5)
     

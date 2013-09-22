@@ -106,7 +106,7 @@ class Battle(cocos.layer.Layer):
     def on_key_release(self, symbol, modifiers):
         # With Space bar, end of turn
         if symbol == key.SPACE:
-            self.game_phase[-1].on_end_of_turn()
+            self.selected.use_boost(1)
             return True
         
         if symbol == key.RETURN:
@@ -172,6 +172,11 @@ ship.{}
         self.ship_info.update()
         self.deselect_targets()
         self.show_targets()
+    
+    def on_speed_change(self):
+        self.ship_info.update()
+        self.clear_reachable_cells()
+        self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
         self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
@@ -268,11 +273,11 @@ class ShipSelected(StaticGamePhase):
         # We can clear the "old" selected ship in the on_exit method.
         self.selected = self.battle.selected
         self.battle.ship_info.set_model(self.selected)
-        weapon_menu = gui.WeaponMenuLayer(self.selected,
+        ship_menu = gui.MenuLayer(self.selected,
                                     main.SCREEN_W - INFO_WIDTH - 2*MARGIN,
                                     MENU_BUTTON_HEIGHT)
-        weapon_menu.x = MARGIN
-        self.battle.add(weapon_menu, z=5, name="weapon_menu")
+        ship_menu.x = MARGIN
+        self.battle.add(ship_menu, z=5, name="ship_menu")
         
     def on_mouse_release(self, i, j, x, y):
         entity = self.battle_grid.get_entity(x, y)
@@ -317,7 +322,7 @@ Cannot fire with %s. It's overheating.
         self.battle.deselect_ship(self.selected)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
-        self.battle.remove("weapon_menu")
+        self.battle.remove("ship_menu")
         
 
 class Attack(GamePhase):

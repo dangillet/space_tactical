@@ -33,7 +33,49 @@ class EnergyType(object):
     def name(cls, index):
         "Returns the translated energy_type name"
         return _(cls.names[index])
+
+class Boost(object):
+    def __init__(self, ship):
+        self.ship = ship
     
+    def use(self):
+        raise NotImplemented
+
+    def reverse(self):
+        raise NotImplemented
+
+class BoostSpeed(Boost):
+    def __init__(self, ship):
+        super(BoostSpeed, self).__init__(ship)
+        self.used = False
+    
+    def use(self):
+        self.used = True
+        self.ship.speed += 2
+        self.ship.dispatch_event("on_speed_change")
+    
+    def reverse(self):
+        self.used = False
+        self.ship.speed -= 2
+
+class BoostShield(Boost):
+    def __init__(self, ship):
+        super(BoostShield, self).__init__(ship)
+        self.used = False
+    
+    def use(self):
+        self.used = True
+        for energy_type in self.ship.shield.iterkeys():
+            self.ship.shield[energy_type] += 5
+        self.ship.dispatch_event("on_change")
+        self.used = True
+    
+    def reverse(self):
+        self.used = False
+        for energy_type in self.ship.shield.iterkeys():
+            self.ship.shield[energy_type] -= 5
+        self.used = False
+
 class Weapon(object):
     """
     Weapon with all its caracteristics. 
@@ -113,6 +155,9 @@ class Ship(cocos.sprite.Sprite):
         self.weapon_idx = None
         for weapon in weapons:
             self.add_weapon(weapon, weapon is weapons[-1])
+        self.boosts = [BoostShield(self),
+                    BoostSpeed(self)]
+        self.boost_used = False
         
         self.turn_completed = False
         self.move_completed = False
@@ -121,7 +166,7 @@ class Ship(cocos.sprite.Sprite):
     
     def display(self):
         "Display the ship and its weapons in the formatted text style"
-        shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems()])
+        shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems() if pr != 0])
         s =  _("""
 {font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
 {font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
@@ -155,12 +200,20 @@ Speed: %d\tHull: %d\tShield: %s
         self.weapon_idx = idx
         self.dispatch_event("on_weapon_change")
 
+    def use_boost(self, idx):
+        if not self.boost_used:
+            self.boosts[idx].use()
+            self.boost_used = True
+            
     def reset_turn(self):
         self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
         for weapon in self.weapons:
             weapon.reset_turn()
+        if self.boost_used:
+            [boost.reverse() for boost in self.boosts if boost.used]
+            self.boost_used = False
     
     def attack(self, defender):
         weapon = self.weapons[self.weapon_idx]
@@ -193,6 +246,7 @@ Ship.register_event_type("on_damage")
 Ship.register_event_type("on_destroyed")
 Ship.register_event_type("on_missed")
 Ship.register_event_type("on_weapon_change")
+Ship.register_event_type("on_speed_change")
 
 class Player(object):
     def __init__(self, name):
@@ -263,7 +317,7 @@ class ShipFactory(object):
             # Read all the ships
             for v in data['ships']:
                 # Read the different shields on the ship
-                shields = {}
+                shields = {energy_idx:0 for energy_idx, _ in enumerate(EnergyType.names)}
                 for shield in v['shield']:
                     energy_idx = EnergyType.names.index(shield['energy_type'])
                     shields[energy_idx] = shield['pr']
