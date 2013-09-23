@@ -46,24 +46,16 @@ class GridLayer(cocos.layer.ScrollableLayer):
         self.borders = []
         
         # Each entity type has a dict {(i, j): entity}
-        self.entities = {'asteroids' : {}, 'ships': {}}
+        self.entities = {'asteroids' : {}, 'diff_terrain' : {}, 'ships': {}}
         
-        # Obstacle on map
-        noise = np.zeros(shape=(self.col, self.row))
-        for x, y in np.ndindex(self.col, self.row):
-            v = simplexnoise.scaled_octave_noise_2d(
-                map_kwargs['octave'],
-                map_kwargs['persistance'],
-                map_kwargs['freq'],
-                0, 255,
-                x + map_kwargs['x_off'],
-                y + map_kwargs['y_off'])
-            c = v - map_kwargs['sparsity']
-            if c<0: c = 0
-            noise[x][y] = 255 - (math.pow(map_kwargs['density'], c) * 255)
-        asteroids_pos = zip(*np.where(noise> 0.))
-
-        # We build the asteroids
+        # We build the obstacles and difficult terrains
+        # We get a set of coordinates for each type of terrain. We don't want 
+        # obstacles on the same place as difficult terrains. So we take the difference
+        # between both sets to get the remainder terrain.
+        diff_terrain_pos = self.generate_noise_terrain(map_kwargs['difficult terrain'])
+        asteroids_pos = self.generate_noise_terrain(map_kwargs['obstacle']) - diff_terrain_pos
+        
+        # Create the asteroids animated sprites
         raw = pyglet.resource.image('aster3.png')
         raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
         texture_seq = pyglet.image.TextureGrid(raw_seq)
@@ -76,6 +68,21 @@ class GridLayer(cocos.layer.ScrollableLayer):
             self.sprite_batch.add(asteroid)
             self.entities['asteroids'][(x, y)] = asteroid
             
+        # Create the difficult terrains sprite
+        raw = pyglet.resource.image('diff_terrain.png')
+
+        for x, y in diff_terrain_pos:
+            diff_terrain = entity.DifficultTerrain(raw, 
+                            position=self.from_grid_to_pixel(x,y))
+            self.sprite_batch.add(diff_terrain)
+            self.entities['diff_terrain'][(x, y)] = diff_terrain
+        
+        # We build the distance matrix.
+        self.dist_mat = DistanceMatrix(self.row, self.col)
+        self.dist_mat.add_obstacles( self.entities['asteroids'].keys() )
+        self.dist_mat.add_difficult_terrains(map_kwargs['difficult terrain']['cost factor'],
+                                        self.entities['diff_terrain'].keys())
+        
         # Background image
         img=pyglet.resource.image("outer-space.jpg")
         self.bg_texture = pyglet.image.TileableTexture.create_for_image(img)
@@ -108,11 +115,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     ('c4B', (255, 0, 0, 100) * (self.col+1)*2))
                     )
         self.grid_visible = True
-        
-        # We build the distance matrix.
-        self.dist_mat = DistanceMatrix(self.row, self.col)
-        for asteroid in self.entities['asteroids'].iterkeys():
-            self.dist_mat.add_obstacle(*asteroid)
         
         # We store key state
         self.bindings = { #key constant : button name
@@ -168,6 +170,26 @@ class GridLayer(cocos.layer.ScrollableLayer):
         if changed:
             self.update_focus(new_pos)
     
+    def generate_noise_terrain(self, params):
+        """
+        Given the params to generate a simplex noise, returns a set of 
+        the coords above the threshold.
+        Returns: set of tuples {(i,j), ...}
+        """
+        noise = np.zeros(shape=(self.col, self.row))
+        for x, y in np.ndindex(self.col, self.row):
+            v = simplexnoise.scaled_octave_noise_2d(
+                params['octave'],
+                params['persistance'],
+                params['freq'],
+                0, 255,
+                x + params['x_off'],
+                y + params['y_off'])
+            c = v - params['sparsity']
+            if c<0: c = 0
+            noise[x][y] = 255 - (math.pow(params['density'], c) * 255)
+        return set(zip(*np.where(noise> 0.)))
+
     def from_pixel_to_grid(self, x, y):
         "Compute the cell coords from pixel coords"
         i, j = (int(x // CELL_WIDTH),
@@ -433,24 +455,34 @@ class DistanceMatrix(object):
         in_grid = not xo<0 and not yo<0 and xo<self.col and yo<self.row
         return in_grid
     
-    def add_difficult_terrain(self, i, j):
-        "Add difficult terrain at position i,j"
-        dist_mat = self.dist_mat.tolil()
-        
+    def _add_difficult_terrain(self, cf, i, j):
+        "Add difficult terrain at position i,j. Cost factor is cf"
         for x_offset in (-1,0,1):
             for y_offset in (-1,0,1):
                 if self.valid_grid(i+x_offset, j+y_offset):
                     if x_offset and y_offset:
-                        dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = 2*math.sqrt(2)
+                        self.dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = cf*math.sqrt(2)
                     elif x_offset or y_offset:
-                        dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = 2
-        
-        self.dist_mat = dist_mat.tocsc()
+                        self.dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = cf
     
-    def add_obstacle(self, i, j):
+    def add_difficult_terrains(self, cf, diff_terrains):
+        "Add list of difficult terrains at position (i,j). Cost factor is cf"
+        self.dist_mat = self.dist_mat.tolil()
+        for diff_terrain in diff_terrains:
+            self._add_difficult_terrain(cf, *diff_terrain)
+        self.dist_mat = self.dist_mat.tocsc()
+    
+    def add_obstacles(self, obstacles):
+        "Add obstacles at position (i, j)"
+        # Change the distance matrix to lil format
+        self.dist_mat = self.dist_mat.tolil()
+        for obstacle in obstacles:
+            self._add_obstacle(*obstacle)
+        # Update the distance matrix in csc format
+        self.dist_mat = self.dist_mat.tocsc()
+    
+    def _add_obstacle(self, i, j):
         "Add obstacle at position i,j"
-        dist_mat = self.dist_mat.tolil()
-        
         grid_number = self.from_coord_to_cell_number(i, j)
 
         # Check if the new obstacle is set at a diagonal from another obstacle.
@@ -463,22 +495,21 @@ class DistanceMatrix(object):
         # | 0 | 1 | 2 |
         # -------------
         # Deny movements between 5 and 7.
+        ctc = self.from_coord_to_cell_number
         for x in (-1, 1):
             for y in (-1, 1):
-                if self.valid_grid(i+x, j+y) and dist_mat[grid_number, self.from_coord_to_cell_number(i+x, j+y)] == 0:
-                    dist_mat[self.from_coord_to_cell_number(i, j+y), self.from_coord_to_cell_number(i+x, j)] = 0
-                    dist_mat[self.from_coord_to_cell_number(i+x, j), self.from_coord_to_cell_number(i, j+y)] = 0
+                if self.valid_grid(i+x, j+y) \
+                   and self.dist_mat[grid_number, ctc(i+x, j+y)] == 0:
+                    self.dist_mat[ctc(i, j+y), ctc(i+x, j)] = 0
+                    self.dist_mat[ctc(i+x, j), ctc(i, j+y)] = 0
                     
         # Set to 0 the whole col at grid_num as we cannot move into this position.
-        dist_mat[: ,grid_number] = 0
+        self.dist_mat[: ,grid_number] = 0
         
         # Set to 0 the whole row at grid_num as this is an obstacle and we cannot move
         # from this position.
-        dist_mat[grid_number, :] = 0 
-   
-        # And update the distance matrix in csc format
-        self.dist_mat = dist_mat.tocsc()
-        
+        self.dist_mat[grid_number, :] = 0 
+
     def from_cell_number_to_coord(self, number):
         """
         Cells are numbered in ascending order starting from 0 at the bottom

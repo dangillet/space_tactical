@@ -2,7 +2,17 @@
   "battlemap": 
   {
     "col": 15, "row":15,
-    "octave": 1, "persistance": 0.1, "freq": 0.3, "sparsity": 205, "x_off": 100, "y_off": 100, "density": 0.1
+    "obstacle":
+    {
+        "octave": 4, "persistance": 0.1, "freq": 0.3, "sparsity": 205,
+        "x_off": 100, "y_off": 100, "density": 0.1
+    },
+    "difficult terrain":
+    {
+        "cost factor":1.5,
+        "octave": 4, "persistance": 0.1, "freq": 0.1, "sparsity": 205,
+        "x_off": 100, "y_off": 100, "density": 0.1
+    }
   },
   "players":
   [

@@ -315,7 +315,10 @@ class Asteroid(cocos.sprite.Sprite):
          super(Asteroid, self).__init__(image, *args, **kwargs)
          frame_num = len(image.frames)
          self._frame_index = random.randint(0, frame_num-1)
-         
+
+class DifficultTerrain(cocos.sprite.Sprite):
+    def __init__(self, image, *args, **kwargs):
+         super(DifficultTerrain, self).__init__(image, *args, **kwargs)
 
 class ShipFactory(object):
     def __init__(self):
