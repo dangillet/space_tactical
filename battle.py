@@ -118,22 +118,23 @@ class Battle(cocos.layer.Layer):
         "Make the entity the selecetd ship."
         self.battle_grid.highlight_ships([self.selected], grid.SHIP_SELECTED)
         # If ship didn't move yet, calculate and highlight the reachable cells
-        if not self.selected.move_completed:
-            self.show_reachable_cells()
-        # Get targets in range if ship didn't attack yet
-        if not self.selected.attack_completed and self.selected.weapon_idx is not None:
-            self.show_targets()
+        self.show_reachable_cells()
+        # Get targets in range
+        self.show_targets()
     
     def show_reachable_cells(self):
         "calculate and highlight the reachable cells"
-        i, j = self.battle_grid.from_pixel_to_grid(*(self.selected.position))
-        self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(i, j, self.selected.speed)
-        self.battle_grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
+        if not self.selected.move_completed:
+            i, j = self.battle_grid.from_pixel_to_grid(*(self.selected.position))
+            self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(i, j, self.selected.speed)
+            self.battle_grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
     
     def show_targets(self):
         "Get targets in range"
-        self.targets = self.battle_grid.get_targets(self.selected)
-        self.battle_grid.highlight_ships(self.targets, grid.TARGET)
+        if not self.selected.attack_completed \
+           and self.selected.weapon_idx is not None:
+            self.targets = self.battle_grid.get_targets(self.selected)
+            self.battle_grid.highlight_ships(self.targets, grid.TARGET)
         
     def deselect_ship(self, ship):
         "Deselect the currently selected ship if in play."
