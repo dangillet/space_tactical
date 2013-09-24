@@ -27,6 +27,10 @@ CLEAR_CELL = [0, 0, 0, 0]
 
 class GridLayer(cocos.layer.ScrollableLayer):
     def __init__(self, map_kwargs):
+        """
+        map_kwargs is a dictionary of keywords arguments to define the battlemap.
+        See battlemap.json for the different objects that can be set.
+        """
         self.is_event_handler = True
         super( GridLayer, self ).__init__()
         # Batch for the grid
@@ -51,7 +55,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # We build the obstacles and difficult terrains
         # We get a set of coordinates for each type of terrain. We don't want 
         # obstacles on the same place as difficult terrains. So we take the difference
-        # between both sets to get the remainder terrain.
+        # between both sets to get the terrain.
         diff_terrain_pos = self.generate_noise_terrain(map_kwargs['difficult terrain'])
         asteroids_pos = self.generate_noise_terrain(map_kwargs['obstacle']) - diff_terrain_pos
         
@@ -68,7 +72,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
             self.sprite_batch.add(asteroid)
             self.entities['asteroids'][(x, y)] = asteroid
             
-        # Create the difficult terrains sprite
+        # Create the difficult terrain sprites
         raw = pyglet.resource.image('diff_terrain.png')
 
         for x, y in diff_terrain_pos:
@@ -144,7 +148,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
         self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
         # How fast we can scroll
         self.scroller.fastness = 700
-        w, h = director.get_window_size()
     
     def draw(self, *args, **kwargs):
         glPushMatrix()
@@ -173,7 +176,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
     def generate_noise_terrain(self, params):
         """
         Given the params to generate a simplex noise, returns a set of 
-        the coords above the threshold.
+        the coords above the defined threshold in the parameters.
         Returns: set of tuples {(i,j), ...}
         """
         noise = np.zeros(shape=(self.col, self.row))
@@ -202,16 +205,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
     def _is_invalid_grid(self, i, j):
         "Check if grid coords are in the grid"
         return i < 0 or j < 0 or not i < self.col or not j < self.row
-        
-    def clear_grid(self):
-        "Removes highlights from the grid"
-        for row in range(self.row):
-            for col in range(self.col):
-                if (col,row) in self.entities['asteroids']:
-                    self.squares[col][row].colors = [128, 128, 128, 0] * 4
-                else:
-                    self.squares[col][row].colors = [0, 0, 128, 150] * 4
-    
+
     def rotate_to_bearing(self, m, n ,ox, oy):
         """
         Returns a RotateTo action from (ox, oy) towards (m, n).
@@ -322,13 +316,11 @@ class GridLayer(cocos.layer.ScrollableLayer):
         "Returns the list of all ennemy ships in range"
         current_player = ship.player
         targets = []
-        for z, child in self.children:
-            # Do not look for the sprite_batch which contains only obstacles
-            if isinstance(child, cocos.batch.BatchNode): continue
-            if child.player != current_player \
-            and self.distance(ship, child) <= ship.weapons[ship.weapon_idx].range \
-            and self.clear_los(ship, child):
-                targets.append(child)
+        for entity in self.entities['ships'].itervalues():
+            if entity.player != current_player \
+                    and self.distance(ship, entity) <= ship.weapons[ship.weapon_idx].range \
+                    and self.clear_los(ship, entity):
+                targets.append(entity)
         return targets
         
     def highlight_cell(self, i, j, color):
@@ -341,7 +333,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
             self.highlight_cell(i, j, color)
     
     def highlight_player(self, player):
-        """Highlight the player ships"""
+        """Highlight the player' ships"""
         self.highlight_ships(player.fleet, PLAYER_TURN)
     
     def highlight_ships(self, ships, color):
