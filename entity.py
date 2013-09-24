@@ -345,7 +345,7 @@ class ShipFactory(object):
             # Read all the ships
             for v in data['ships']:
                 # Read the different shields on the ship
-                shields = {energy_idx:0 for energy_idx, _ in enumerate(EnergyType.names)}
+                shields = {}
                 for shield in v['shield']:
                     energy_idx = EnergyType.names.index(shield['energy_type'])
                     shields[energy_idx] = shield['pr']
