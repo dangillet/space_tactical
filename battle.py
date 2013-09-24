@@ -343,6 +343,8 @@ class Attack(GamePhase):
         super(Attack, self).on_exit()
         self.battle.selected.attack_completed = True
         self.battle.deselect_targets()
+        self.battle.clear_reachable_cells()
+        self.battle.show_reachable_cells()
 
 class Move(GamePhase):
     def __init__(self, battle, i, j):
