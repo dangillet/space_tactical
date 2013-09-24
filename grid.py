@@ -1,5 +1,5 @@
 import math
-from random import shuffle, randint, uniform
+from random import shuffle, randint, uniform, choice
 import numpy as np
 from scipy.sparse import lil_matrix
 from scipy.sparse.csgraph import dijkstra
@@ -73,10 +73,13 @@ class GridLayer(cocos.layer.ScrollableLayer):
             self.entities['asteroids'][(x, y)] = asteroid
             
         # Create the difficult terrain sprites
-        raw = pyglet.resource.image('diff_terrain.png')
+        raw = pyglet.resource.image('nebulaes.png')
+        raw_grid = pyglet.image.ImageGrid(raw, 3, 3, row_padding=1, column_padding=1)
+        texture_grid = pyglet.image.TextureGrid(raw_grid)
+        # max_len = len(texture_grid)
 
         for x, y in diff_terrain_pos:
-            diff_terrain = entity.DifficultTerrain(raw, 
+            diff_terrain = entity.DifficultTerrain(choice(texture_grid), 
                             position=self.from_grid_to_pixel(x,y))
             self.sprite_batch.add(diff_terrain)
             self.entities['diff_terrain'][(x, y)] = diff_terrain
