@@ -24,9 +24,9 @@
                 "type": "Fighter",
                 "mods": 
                 [
-                    ["Speed", 1],
-                    ["Shield", 1, "URANIUM", 2],
-                    ["Weapon", 1, "Laser 2"]
+                    ["ModSpeed", 1],
+                    ["ModShield", 1, "URANIUM", 2],
+                    ["ModWeapon", 1, "Laser 2"]
                 ],
                 "count": 3
             },

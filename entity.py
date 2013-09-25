@@ -408,8 +408,8 @@ class ShipFactory(object):
                      shields,
                      v['weapons']
                     )
-        # And load in memory the different mods classes
-        self.mod_klasses = [ModSpeed, ModShield, ModWeapon]
+        # And load the different mods classes
+        self.ModKlasses = [ModSpeed, ModShield, ModWeapon]
     
     def create_ship(self, ship_type, mods):
         "Create a new ship of type ship_type"
@@ -419,14 +419,14 @@ class ShipFactory(object):
             weapons.append(self.create_weapon(weapon_type))
         # Take all args except the last, and replace it with the constructed weapon
         ship = Ship(*self.ships[ship_type][:-1], weapons=weapons)
-        if mods is not None:
-            for mod in mods:
-                mod_name = _(mod[0])
-                for mod_klass in self.mod_klasses:
-                    if mod_klass.name == mod_name:
-                        mod_instance = mod_klass(ship, *mod[1:], sf=self)
-                        ship.add_mod(mod_instance)
-                        break
+        # If there are mods, apply them
+        for mod in mods or []: # If mods is None, we pass an empty list
+            mod_name = mod[0]
+            for ModKlass in self.ModKlasses:
+                if ModKlass.__name__ == mod_name:
+                    mod_instance = ModKlass(ship, *mod[1:], sf=self)
+                    ship.add_mod(mod_instance)
+                    break
         return ship
     
     def create_weapon(self, weapon_type):
