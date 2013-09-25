@@ -46,7 +46,7 @@ class Boost(object):
 
 class ModSpeed(Boost):
     name = _("Speed")
-    def __init__(self, ship, level):
+    def __init__(self, ship, level, sf):
         super(ModSpeed, self).__init__(ship)
         self.level = level
     
@@ -58,20 +58,21 @@ class ModSpeed(Boost):
 
 class ModWeapon(Boost):
     name = _("Weapon")
-    def __init__(self, ship, level, weapon):
+    def __init__(self, ship, level, weapon, sf):
         super(ModWeapon, self).__init__(ship)
         self.level = level
         self.weapon = weapon
+        self.sf = sf
     
     def use(self):
-        self.ship.add_weapon(self.weapon)
+        self.ship.add_weapon(self.sf.create_weapon(self.weapon))
     
     def reverse(self):
         pass
 
 class ModShield(Boost):
     name = _("Shield")
-    def __init__(self, ship, level, energy_type, pr):
+    def __init__(self, ship, level, energy_type, pr, sf):
         super(ModShield, self).__init__(ship)
         self.level = level
         self.energy_type = EnergyType.names.index(energy_type)
@@ -408,15 +409,14 @@ class ShipFactory(object):
                      v['weapons']
                     )
         # And load in memory the different mods classes
-        self.mod_klasses = [ModSpeed, ModShield]
+        self.mod_klasses = [ModSpeed, ModShield, ModWeapon]
     
     def create_ship(self, ship_type, mods):
         "Create a new ship of type ship_type"
         # The 5th element in the ship definition is the list of weapons
         weapons = []
         for weapon_type in self.ships[ship_type][5]:
-            weapon_args = self.weapons[weapon_type]
-            weapons.append(Weapon(*weapon_args))
+            weapons.append(self.create_weapon(weapon_type))
         # Take all args except the last, and replace it with the constructed weapon
         ship = Ship(*self.ships[ship_type][:-1], weapons=weapons)
         if mods is not None:
@@ -424,11 +424,14 @@ class ShipFactory(object):
                 mod_name = _(mod[0])
                 for mod_klass in self.mod_klasses:
                     if mod_klass.name == mod_name:
-                        mod_instance = mod_klass(ship, *mod[1:])
+                        mod_instance = mod_klass(ship, *mod[1:], sf=self)
                         ship.add_mod(mod_instance)
                         break
         return ship
-                
+    
+    def create_weapon(self, weapon_type):
+        weapon_args = self.weapons[weapon_type]
+        return Weapon(*weapon_args)
     
 if __name__ == '__main__':
     from cocos.director import director

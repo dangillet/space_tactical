@@ -25,7 +25,8 @@
                 "mods": 
                 [
                     ["Speed", 1],
-                    ["Shield", 1, "URANIUM", 2]
+                    ["Shield", 1, "URANIUM", 2],
+                    ["Weapon", 1, "Laser 2"]
                 ],
                 "count": 3
             },
