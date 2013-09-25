@@ -34,37 +34,37 @@
   
   "ships":[
     {
-    "ship_type": "Fighter",
-    "image": "ship.png",
-    "speed": 5,
-    "hull": 5,
-    "shield": [
-            {"pr":10, "energy_type":"SONIC"}
-        ],
-    "weapons": ["Laser 1"]
+      "ship_type": "Fighter",
+      "image": "ship.png",
+      "speed": 5,
+      "hull": 5,
+      "shield": [
+              {"pr":10, "energy_type":"SONIC"}
+          ],
+      "weapons": ["Laser 1"]
     },
     
     {
-    "ship_type": "Destroyer",
-    "image": "ship2.png",
-    "speed": 3,
-    "hull": 50,
-    "shield": [
-            {"pr":20, "energy_type":"PLASMA"}
-        ],
-    "weapons": ["Laser 1", "Laser 3"]
+      "ship_type": "Destroyer",
+      "image": "ship2.png",
+      "speed": 3,
+      "hull": 50,
+      "shield": [
+              {"pr":20, "energy_type":"PLASMA"}
+          ],
+      "weapons": ["Laser 1", "Laser 3"]
     },
 
     {
-    "ship_type": "Cruiser",
-    "image": "ship1.png",
-    "speed": 3,
-    "hull": 40,
-    "shield": [
-            {"pr":20, "energy_type":"URANIUM"},
-            {"pr":10, "energy_type":"PLASMA"}
-        ],
-    "weapons": ["Laser 2", "Laser 3"]
+      "ship_type": "Cruiser",
+      "image": "ship1.png",
+      "speed": 3,
+      "hull": 40,
+      "shield": [
+              {"pr":20, "energy_type":"URANIUM"},
+              {"pr":10, "energy_type":"PLASMA"}
+          ],
+      "weapons": ["Laser 2", "Laser 3"]
     }
   ]
 }

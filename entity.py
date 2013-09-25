@@ -44,6 +44,51 @@ class Boost(object):
     def reverse(self):
         raise NotImplemented
 
+class ModSpeed(Boost):
+    name = _("Speed")
+    def __init__(self, ship, level):
+        super(ModSpeed, self).__init__(ship)
+        self.level = level
+    
+    def use(self):
+        self.ship.speed += self.level
+    
+    def reverse(self):
+        self.ship.speed -= self.level
+
+class ModWeapon(Boost):
+    name = _("Weapon")
+    def __init__(self, ship, level, weapon):
+        super(ModWeapon, self).__init__(ship)
+        self.level = level
+        self.weapon = weapon
+    
+    def use(self):
+        self.ship.add_weapon(self.weapon)
+    
+    def reverse(self):
+        pass
+
+class ModShield(Boost):
+    name = _("Shield")
+    def __init__(self, ship, level, energy_type, pr):
+        super(ModShield, self).__init__(ship)
+        self.level = level
+        self.energy_type = EnergyType.names.index(energy_type)
+        self.pr = pr
+    
+    def use(self):
+        if self.energy_type in self.ship.shield:
+            self.ship.shield[self.energy_type] += self.pr
+        else:
+            self.ship.shield[self.energy_type] = self.pr
+    
+    def reverse(self):
+        if self.ship.shield[self.energy_type] == self.pr:
+            del self.ship.shield[self.energy_type]
+        else:
+            self.ship.shield[self.energy_type] -= self.pr
+
 class BoostSpeed(Boost):
     def __init__(self, ship):
         super(BoostSpeed, self).__init__(ship)
@@ -181,6 +226,7 @@ class Ship(cocos.sprite.Sprite):
                     BoostSpeed(self),
                     BoostWeaponDamage(self)]
         self.boost_used = False
+        self.mods = []
         
         self.turn_completed = False
         self.move_completed = False
@@ -229,6 +275,10 @@ Speed: %d\tHull: %d\tShield: %s
             self.boost_used = True
             self.dispatch_event("on_boost_use")
             
+    def add_mod(self, mod):
+        self.mods.append(mod)
+        mod.use()
+    
     def reset_turn(self):
         self.turn_completed = False
         self.move_completed = False
@@ -357,8 +407,10 @@ class ShipFactory(object):
                      shields,
                      v['weapons']
                     )
+        # And load in memory the different mods classes
+        self.mod_klasses = [ModSpeed, ModShield]
     
-    def create_ship(self, ship_type):
+    def create_ship(self, ship_type, mods):
         "Create a new ship of type ship_type"
         # The 5th element in the ship definition is the list of weapons
         weapons = []
@@ -366,7 +418,17 @@ class ShipFactory(object):
             weapon_args = self.weapons[weapon_type]
             weapons.append(Weapon(*weapon_args))
         # Take all args except the last, and replace it with the constructed weapon
-        return Ship(*self.ships[ship_type][:-1], weapons=weapons)
+        ship = Ship(*self.ships[ship_type][:-1], weapons=weapons)
+        if mods is not None:
+            for mod in mods:
+                mod_name = _(mod[0])
+                for mod_klass in self.mod_klasses:
+                    if mod_klass.name == mod_name:
+                        mod_instance = mod_klass(ship, *mod[1:])
+                        ship.add_mod(mod_instance)
+                        break
+        return ship
+                
     
 if __name__ == '__main__':
     from cocos.director import director

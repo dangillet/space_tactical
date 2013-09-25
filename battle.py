@@ -1,4 +1,4 @@
-import random
+import random, gc
 from itertools import cycle
 import json
 
@@ -65,9 +65,12 @@ class Battle(cocos.layer.Layer):
             for player_data in data['players']:
                 player = entity.Player(player_data['name'])
                 self.players.append(player)
-                for ship_type, quantity in player_data['fleet'].iteritems():
+                for ship_data in player_data['fleet']:
+                    quantity = ship_data.get("count", 1)
                     for _ in range(quantity):
-                        ship = self.ships_factory.create_ship(ship_type)
+                        mods = ship_data.get("mods")
+                        ship = self.ships_factory.create_ship(ship_data['type'],
+                                                                mods =mods)
                         ship.scale = float(grid.CELL_WIDTH) / ship.width
                         ship.push_handlers(self)
                         player.add_ship(ship)
@@ -105,11 +108,7 @@ class Battle(cocos.layer.Layer):
         self.game_phase[-1].on_mouse_release(i, j, x, y)
 
     def on_key_release(self, symbol, modifiers):
-        # With Space bar, end of turn
-        if symbol == key.SPACE:
-            self.selected.use_boost(1)
-            return True
-        
+        # With Return, end of turn
         if symbol == key.RETURN:
             self.game_phase[-1].on_end_of_round()
             return True
