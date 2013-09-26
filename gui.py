@@ -71,7 +71,8 @@ class InfoLayer(cocos.layer.ColorLayer):
         if self.model is not None:
             self.model.pop_handlers()
         self.model = model
-        model.push_handlers(self)
+        if self.model is not None:
+            model.push_handlers(self)
         self.update()
     
     def remove_model(self):

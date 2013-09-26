@@ -107,6 +107,13 @@ class Battle(cocos.layer.Layer):
         
         self.game_phase[-1].on_mouse_release(i, j, x, y)
 
+    def on_mouse_motion(self, x, y, dx, dy):
+        # Get the coords from the scrolling manager.
+        x, y = self.scroller.pixel_from_screen(x, y)
+        # Transform mouse pos in local coord
+        x, y = self.scroller.point_to_local((x, y))
+        self.game_phase[-1].on_mouse_motion(x, y)
+        
     def on_key_release(self, symbol, modifiers):
         # With Return, end of turn
         if symbol == key.RETURN:
@@ -210,6 +217,9 @@ class GamePhase(object):
     def on_mouse_release(self, i, j, x, y):
         pass
     
+    def on_mouse_motion(self, x, y):
+        pass
+    
     def on_end_of_turn(self):
         pass
     
@@ -264,6 +274,13 @@ class Idle(StaticGamePhase):
                 self.battle.change_game_phase(ShipSelected(self.battle))
             else:
                 self.battle.ship_info.set_model(entity)
+    
+    def on_mouse_motion(self, x, y):
+        entity = self.battle_grid.get_entity(x, y)
+        if entity is not None:
+            self.battle.ship_info.set_model(entity)
+        else:
+            self.battle.ship_info.remove_model()
 
 class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
@@ -316,6 +333,13 @@ class ShipSelected(StaticGamePhase):
         else: # entity is self.selected or :
             self.battle.change_game_phase(Idle(self.battle))
         
+    def on_mouse_motion(self, x, y):
+        entity = self.battle_grid.get_entity(x, y)
+        if entity is not None:
+            self.battle.ship_info.set_model(entity)
+        else:
+            self.battle.ship_info.set_model(self.selected)
+    
     def on_end_of_round(self):
         self.battle.change_game_phase(Idle(self.battle))
         super(ShipSelected, self).on_end_of_round()
