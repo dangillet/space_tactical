@@ -1,4 +1,4 @@
-import random, json
+import random, json, fractions
 
 import cocos
 
@@ -6,6 +6,8 @@ from pyglet import event
 import pyglet.text as text
 
 import main
+
+COOLDOWN = 100
 
 class Damage(object):
     """
@@ -148,15 +150,14 @@ class Weapon(object):
     """
     Weapon with all its caracteristics. 
     """
-    def __init__( self, weapon_type, weapon_range, precision, heating, cooldown,
+    def __init__( self, weapon_type, weapon_range, precision, rof,
                   reliability, dmg_type, dmg):
         "dmg is a list with min and max values."
         self.ship = None
         self.weapon_type = weapon_type
         self.range = weapon_range
         self.precision = precision
-        self.heating = heating
-        self.cooldown = cooldown
+        self.heating = float(100 / rof)
         self.temperature = 0
         self.reliability = reliability
         self.energy_type = dmg_type # index of the EnergyType.names list
@@ -170,10 +171,13 @@ class Weapon(object):
 {.tab_stops [150]}
 Energy type: %s{#x09}Range: %d{}
 Precision: %d%%{#x09}Damage: %r {}
-Temperature: %d{#x09}Heating: %d {}
+Temperature: %s%d%s{#x09}Heating: %d {}
 Reliability: %d%%{}
 """) % (self.weapon_type, EnergyType.name(self.energy_type), self.range,
-        self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
+        self.precision*100, self.damage, 
+        "{color (255, 0, 0, 255)}" if self.temperature >= 100 else "",
+        self.temperature, "{color (255, 255, 255, 255)}", self.heating,
+        self.reliability*100)
     
     def __repr__(self):
         return """
@@ -200,7 +204,7 @@ Reliability: %d%%
         self.temperature += self.heating
     
     def reset_turn(self):
-        self.temperature = max(0, self.temperature - self.cooldown)
+        self.temperature = max(0, self.temperature - COOLDOWN)
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, speed, hull,
@@ -387,8 +391,7 @@ class ShipFactory(object):
                     (v['weapon_type'],
                      v['range'],
                      v['precision'],
-                     v['heating'],
-                     v['cooldown'],
+                     fractions.Fraction(v['rate of fire']),
                      v['reliability'],
                      EnergyType.names.index(v['energy_type']), # The index of the energy type in the list of energies
                      v['damage'],
@@ -411,7 +414,7 @@ class ShipFactory(object):
         # And load the different mods classes
         self.ModKlasses = [ModSpeed, ModShield, ModWeapon]
     
-    def create_ship(self, ship_type, mods):
+    def create_ship(self, ship_type, mods=None):
         "Create a new ship of type ship_type"
         # The 5th element in the ship definition is the list of weapons
         weapons = []

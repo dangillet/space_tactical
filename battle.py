@@ -317,7 +317,7 @@ class ShipSelected(StaticGamePhase):
             # If we clicked on a target, attack it.
             elif self.battle.targets is not None and entity in self.battle.targets:
                 weapon = self.selected.weapons[self.selected.weapon_idx]
-                if weapon.temperature + weapon.heating > 100:
+                if weapon.temperature >= 100.:
                     msg = PROMPT + _("""{font_name 'Classic Robot'}
 {font_size 10}{color [255, 0, 0, 255]}Cannot fire with %s. It's overheating.
 """) % (weapon.weapon_type)
