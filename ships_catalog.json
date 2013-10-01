@@ -32,6 +32,7 @@
   "ships":[
     {
       "ship_type": "Fighter",
+      "slots": {"mobility":1, "defense":1, "weapon":1},
       "image": "ship.png",
       "speed": 5,
       "hull": 5,
@@ -43,6 +44,7 @@
     
     {
       "ship_type": "Destroyer",
+      "slots": {"mobility":2, "defense":2, "weapon":2},
       "image": "ship2.png",
       "speed": 3,
       "hull": 50,
@@ -54,6 +56,7 @@
 
     {
       "ship_type": "Cruiser",
+      "slots": {"mobility":2, "defense":3, "weapon":3},
       "image": "ship1.png",
       "speed": 3,
       "hull": 40,

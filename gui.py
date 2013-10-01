@@ -267,13 +267,13 @@ class WeaponMenu(ShipMenu):
     "Menu for selecting the current weapon"
     def __init__(self, ship):
         super(WeaponMenu, self).__init__(ship)
-        weapons = ship.weapons
+        weapons = ship.slots['weapon'].mods
         l = []
         for idx, weapon in enumerate(weapons):
             l.append(MenuItemDisableable(weapon.weapon_type, ship.change_weapon, idx,
                     disabled = weapon.is_inop))
         self.create_menu(l, layout_strategy=horizontalMenuLayout)
-        if self.ship.weapon_idx is not None:
+        if self.ship.weapon is not None:
             self._select_item(self.ship.weapon_idx)
     
     def on_key_press(self, symbol, modifiers):

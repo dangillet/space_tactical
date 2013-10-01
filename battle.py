@@ -138,7 +138,7 @@ class Battle(cocos.layer.Layer):
     def show_targets(self):
         "Get targets in range"
         if not self.selected.attack_completed \
-           and self.selected.weapon_idx is not None:
+           and self.selected.weapon is not None:
             self.targets = self.battle_grid.get_targets(self.selected)
             self.battle_grid.highlight_ships(self.targets, grid.TARGET)
         
@@ -316,7 +316,7 @@ class ShipSelected(StaticGamePhase):
                     self.battle.change_game_phase(Idle(self.battle))
             # If we clicked on a target, attack it.
             elif self.battle.targets is not None and entity in self.battle.targets:
-                weapon = self.selected.weapons[self.selected.weapon_idx]
+                weapon = self.selected.weapon
                 if weapon.temperature >= 100.:
                     msg = PROMPT + _("""{font_name 'Classic Robot'}
 {font_size 10}{color [255, 0, 0, 255]}Cannot fire with %s. It's overheating.

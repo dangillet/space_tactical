@@ -36,8 +36,8 @@ class EnergyType(object):
         "Returns the translated energy_type name"
         return _(cls.names[index])
 
-class Boost(object):
-    def __init__(self, ship):
+class Mod(object):
+    def __init__(self, ship=None):
         self.ship = ship
     
     def use(self):
@@ -46,11 +46,33 @@ class Boost(object):
     def reverse(self):
         raise NotImplemented
 
-class ModSpeed(Boost):
+class Slot(object):
+    def __init__(self, ship, slot_type, max_count):
+        self.ship = ship
+        self.type = slot_type
+        self.max_count = max_count
+        self.mods = []
+    
+    def add_mod(self, mod):
+        if len(self.mods) == self.max_count:
+            return False
+        mod.ship = self.ship
+        self.mods.append(mod)
+        mod.use()
+        return True
+    
+    def remove_mod(self, mod):
+        self.mods.remove(mod)
+        mod.reverse()
+        mod.ship = None
+
+class ModSpeed(Mod):
     name = _("Speed")
-    def __init__(self, ship, level, sf):
-        super(ModSpeed, self).__init__(ship)
+    def __init__(self, level, sf):
+        "sf: ShipFactory"
+        super(ModSpeed, self).__init__()
         self.level = level
+        self.type = "mobility"
     
     def use(self):
         self.ship.speed += self.level
@@ -58,13 +80,14 @@ class ModSpeed(Boost):
     def reverse(self):
         self.ship.speed -= self.level
 
-class ModWeapon(Boost):
+class ModWeapon(Mod):
     name = _("Weapon")
-    def __init__(self, ship, level, weapon, sf):
-        super(ModWeapon, self).__init__(ship)
+    def __init__(self, level, weapon, sf):
+        super(ModWeapon, self).__init__(None)
         self.level = level
         self.weapon = weapon
         self.sf = sf
+        self.type = "attack"
     
     def use(self):
         self.ship.add_weapon(self.sf.create_weapon(self.weapon))
@@ -72,13 +95,14 @@ class ModWeapon(Boost):
     def reverse(self):
         pass
 
-class ModShield(Boost):
+class ModShield(Mod):
     name = _("Shield")
-    def __init__(self, ship, level, energy_type, pr, sf):
-        super(ModShield, self).__init__(ship)
+    def __init__(self, level, energy_type, pr, sf):
+        super(ModShield, self).__init__()
         self.level = level
         self.energy_type = EnergyType.names.index(energy_type)
         self.pr = pr
+        self.type = "defense"
     
     def use(self):
         if self.energy_type in self.ship.shield:
@@ -92,7 +116,7 @@ class ModShield(Boost):
         else:
             self.ship.shield[self.energy_type] -= self.pr
 
-class BoostSpeed(Boost):
+class BoostSpeed(Mod):
     def __init__(self, ship):
         super(BoostSpeed, self).__init__(ship)
         self.used = False
@@ -107,7 +131,7 @@ class BoostSpeed(Boost):
         self.used = False
         self.ship.speed -= 2
 
-class BoostWeaponDamage(Boost):
+class BoostWeaponDamage(Mod):
     def __init__(self, ship):
         super(BoostWeaponDamage, self).__init__(ship)
         self.used = False
@@ -127,7 +151,7 @@ class BoostWeaponDamage(Boost):
         damage.min -= 5
         damage.max -= 5
 
-class BoostShield(Boost):
+class BoostShield(Mod):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
         self.used = False
@@ -146,14 +170,15 @@ class BoostShield(Boost):
             self.ship.shield[energy_type] -= 5
         self.used = False
 
-class Weapon(object):
+class Weapon(Mod):
     """
     Weapon with all its caracteristics. 
     """
     def __init__( self, weapon_type, weapon_range, precision, rof,
                   reliability, dmg_type, dmg):
         "dmg is a list with min and max values."
-        self.ship = None
+        super(Weapon, self).__init__()
+        self.type = "weapon"
         self.weapon_type = weapon_type
         self.range = weapon_range
         self.precision = precision
@@ -163,6 +188,12 @@ class Weapon(object):
         self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
         self.is_inop = False
+    
+    def use(self):
+        pass
+    
+    def reverse(self):
+        pass
     
     def display(self):
         "Display the weapon in the formatted text style"
@@ -207,7 +238,7 @@ Reliability: %d%%
         self.temperature = max(0, self.temperature - COOLDOWN)
 
 class Ship(cocos.sprite.Sprite):
-    def __init__( self, image, ship_type, speed, hull,
+    def __init__( self, image, ship_type, slots, speed, hull,
                 shield, weapons):
         """
             Initialize the Ship
@@ -223,21 +254,28 @@ class Ship(cocos.sprite.Sprite):
         self.hull = hull
         # shield = {energy_idx:protection}
         self.shield = shield.copy()
-        self.weapons = []
-        self.weapon_idx = None
-        for weapon in weapons:
-            self.add_weapon(weapon, weapon is weapons[-1])
         self.boosts = [BoostShield(self),
                     BoostSpeed(self),
                     BoostWeaponDamage(self)]
         self.boost_used = False
-        self.mods = []
+        self.slots = { slot_type: Slot(self, slot_type, max_count) 
+                        for slot_type, max_count in slots.iteritems() }
+        
+        for weapon in weapons:
+            self.add_mod(weapon)
+        self.weapon_idx = 0
         
         self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
 
-    
+    @property
+    def weapon(self):
+        if self.weapon_idx is not None:
+            return self.slots['weapon'].mods[self.weapon_idx]
+        else:
+            return None
+
     def display(self):
         "Display the ship and its weapons in the formatted text style"
         shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems() if pr != 0])
@@ -245,10 +283,10 @@ class Ship(cocos.sprite.Sprite):
 {font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
 {font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
 """) % (self.ship_type, self.speed, self.hull, shield)
-        if self.weapon_idx is not None:
+        if self.weapon is not None:
             s += _("""
 {underline [255, 255, 255, 255]}Weapon{underline None}: {}
-%s""") % (self.weapons[self.weapon_idx].display())
+%s""") % (self.weapon.display())
         return s
     
     def __repr__(self):
@@ -257,19 +295,13 @@ class Ship(cocos.sprite.Sprite):
 %s
 Speed: %d\tHull: %d\tShield: %s
 """ % (self.ship_type, self.speed, self.hull, shield)
-        if self.weapon_idx is not None:
+        if self.weapon is not None:
             s += """
     Weapon:
-    %s""" % (self.weapons[self.weapon_idx])
+    %s""" % (self.weapon)
         return s
-        
-    def add_weapon(self, weapon, select=True):
-        "Add a weapon to the ship"
-        weapon.ship = self
-        self.weapons.append(weapon)
-        if select:
-            self.weapon_idx = len(self.weapons)-1
     
+    # Need to change this to a setter of self.weapon
     def change_weapon(self, idx):
         self.weapon_idx = idx
         self.dispatch_event("on_weapon_change")
@@ -281,8 +313,7 @@ Speed: %d\tHull: %d\tShield: %s
             self.dispatch_event("on_boost_use")
             
     def add_mod(self, mod):
-        self.mods.append(mod)
-        mod.use()
+        return self.slots[mod.type].add_mod(mod)
     
     def reset_turn(self):
         self.turn_completed = False
@@ -406,6 +437,7 @@ class ShipFactory(object):
                 self.ships[v['ship_type']] = \
                     (v['image'].encode('utf-8'), # cocos.Sprite needs a str, not a unicode
                      v['ship_type'],
+                     v['slots'],
                      v['speed'],
                      v['hull'],
                      shields,
@@ -416,18 +448,19 @@ class ShipFactory(object):
     
     def create_ship(self, ship_type, mods=None):
         "Create a new ship of type ship_type"
-        # The 5th element in the ship definition is the list of weapons
+        # The last element in the ship definition is the list of weapons
         weapons = []
-        for weapon_type in self.ships[ship_type][5]:
+        for weapon_type in self.ships[ship_type][-1]:
             weapons.append(self.create_weapon(weapon_type))
         # Take all args except the last, and replace it with the constructed weapon
         ship = Ship(*self.ships[ship_type][:-1], weapons=weapons)
         # If there are mods, apply them
         for mod in mods or []: # If mods is None, we pass an empty list
-            mod_name = mod[0]
+            mod = mod[:]
+            mod_name = mod.pop(0)
             for ModKlass in self.ModKlasses:
                 if ModKlass.__name__ == mod_name:
-                    mod_instance = ModKlass(ship, *mod[1:], sf=self)
+                    mod_instance = ModKlass(*mod, sf=self)
                     ship.add_mod(mod_instance)
                     break
         return ship

@@ -321,7 +321,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         targets = []
         for entity in self.entities['ships'].itervalues():
             if entity.player != current_player \
-                    and self.distance(ship, entity) <= ship.weapons[ship.weapon_idx].range \
+                    and self.distance(ship, entity) <= ship.weapon.range \
                     and self.clear_los(ship, entity):
                 targets.append(entity)
         return targets
