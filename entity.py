@@ -458,11 +458,15 @@ class ShipFactory(object):
         for mod in mods or []: # If mods is None, we pass an empty list
             mod = mod[:]
             mod_name = mod.pop(0)
-            for ModKlass in self.ModKlasses:
-                if ModKlass.__name__ == mod_name:
-                    mod_instance = ModKlass(*mod, sf=self)
-                    ship.add_mod(mod_instance)
-                    break
+            if mod_name in self.weapons:
+                weapon = self.create_weapon(mod_name)
+                ship.add_mod(weapon)
+            else:
+                for ModKlass in self.ModKlasses:
+                    if ModKlass.__name__ == mod_name:
+                        mod_instance = ModKlass(*mod, sf=self)
+                        ship.add_mod(mod_instance)
+                        break
         return ship
     
     def create_weapon(self, weapon_type):
