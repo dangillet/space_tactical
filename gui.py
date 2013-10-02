@@ -6,6 +6,8 @@ import pyglet
 import pyglet.text as text
 from pyglet.gl import *
 
+import entity
+
 BACKGROUND = (50, 50, 50, 200)
 PADDING = 10
 
@@ -64,8 +66,11 @@ class InfoLayer(cocos.layer.ColorLayer):
         if self.model is None:
             self.info_layer.document = text.decode_attributed('')
         else:
-            self.info_layer.document = text.decode_attributed(self.model.display())
+            self.info_layer.document = text.decode_attributed(self.display_model())
         self.info_layer.end_update()
+    
+    def display_model(self):
+        raise NotImplementedError
     
     def set_model(self, model):
         if self.model is not None:
@@ -135,6 +140,47 @@ class ScrollableInfoLayer(InfoLayer):
         if y < sy or y > sy + self.info_h: return False
         return True
 
+class ShipInfoLayer(InfoLayer):
+    def __init__(self, position, width, height):
+        super(ShipInfoLayer, self).__init__(position, width, height)
+    
+    def display_model(self):
+        "Display the ship and its weapons in the formatted text style"
+        model = self.model
+        shield = " - ".join(["%d/%s" % (pr, entity.EnergyType.name(en_idx)) 
+                        for en_idx, pr in model.shield.iteritems() if pr != 0])
+        s =  _("""
+{font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
+{font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
+""") % (model.ship_type, model.speed, model.hull, shield)
+        if model.weapon is not None:
+            weapon = model.weapon
+            s += _("""
+{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
+{.tab_stops [150]}
+Energy type: %s{#x09}Range: %d{}
+Precision: %d%%{#x09}Damage: %r {}
+Temperature: %s%d%s{#x09}Heating: %d {}
+Reliability: %d%%{}
+""") % (weapon.weapon_type, entity.EnergyType.name(weapon.energy_type), weapon.range,
+        weapon.precision*100, weapon.damage, 
+        "{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",
+        weapon.temperature, "{color (255, 255, 255, 255)}", weapon.heating,
+        weapon.reliability*100)
+        return s
+    
+    def on_change(self):
+        self.update()
+    
+    def on_weapon_change(self):
+        self.update()
+        
+    def on_speed_change(self):
+        self.update()
+    
+    def on_weapon_jammed(self, weapon):
+        self.update()
+
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):
         super(MenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
@@ -147,17 +193,6 @@ class MenuLayer(cocos.layer.ColorLayer):
             x_offset += item.get_item_width() + 20
         boost_menu.x = x_offset
         self.add(boost_menu, z=5, name="boost_menu")
-        
-    def on_enter(self):
-        super(MenuLayer, self).on_enter()
-        self.ship.push_handlers(self.get("boost_menu"),
-                                self.get("weapon_menu"))
-        
-    def on_exit(self):
-        super(MenuLayer, self).on_exit()
-        self.ship.pop_handlers()
-                
-        
     
 class MenuItemDisableable (MenuItem):
     "Menu Item which can be disabled"
@@ -242,6 +277,14 @@ class ShipMenu(Menu):
         }
         self.ship = ship
     
+    def on_enter(self):
+        super(ShipMenu, self).on_enter()
+        self.ship.push_handlers(self)
+    
+    def on_exit(self):
+        super(ShipMenu, self).on_exit()
+        self.ship.pop_handlers()
+        
     def on_key_press(self, symbol, modifiers):
         return False
         
@@ -282,6 +325,7 @@ class WeaponMenu(ShipMenu):
     def on_weapon_jammed(self, weapon):
         idx = self.ship.weapons.index(weapon)
         self.children[idx][1].is_disabled = True
+        return True
 
 class BoostMenu(ShipMenu):
     "Menu for selecting the boost"
@@ -298,6 +342,7 @@ class BoostMenu(ShipMenu):
     def on_boost_use(self):
         for _, item in self.children:
             item.is_disabled = True
+        return True
 
 def horizontalMenuLayout (menu):
     pos_x = 20

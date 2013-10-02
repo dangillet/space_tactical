@@ -31,7 +31,7 @@ class Battle(cocos.layer.Layer):
         super(Battle, self ).__init__()
         self.players = []
         self.ships_factory = entity.ShipFactory()
-        self.ship_info = gui.InfoLayer(
+        self.ship_info = gui.ShipInfoLayer(
             (main.SCREEN_W - INFO_WIDTH + MARGIN, MARGIN),
             INFO_WIDTH - 2*MARGIN, SHIP_INFO_HEIGHT)
         self.add(self.ship_info, z=5)
@@ -173,23 +173,17 @@ ship.{}
         
         attacker.attack(defender)
     
-    def on_change(self):
-        self.ship_info.update()
-    
     def on_weapon_change(self):
-        self.ship_info.update()
         self.deselect_targets()
         self.show_targets()
     
     def on_speed_change(self):
-        self.ship_info.update()
         if not self.selected.move_completed:
             self.clear_reachable_cells()
             self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
         self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
-        self.ship_info.update()
     
     def on_damage(self, ship, dmg):
         self.msg += _("HIT! %s took %d points of damage. {}\n") % (ship.ship_type, dmg)
@@ -296,7 +290,6 @@ class ShipSelected(StaticGamePhase):
                                     main.SCREEN_W - INFO_WIDTH - 2*MARGIN,
                                     MENU_BUTTON_HEIGHT)
         ship_menu.x = MARGIN
-        self.selected.push_handlers(ship_menu)
         self.battle.add(ship_menu, z=5, name="ship_menu")
         
     def on_mouse_release(self, i, j, x, y):
@@ -349,7 +342,6 @@ class ShipSelected(StaticGamePhase):
         self.battle.deselect_ship(self.selected)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
-        self.selected.pop_handlers()
         self.battle.remove("ship_menu")
         
 

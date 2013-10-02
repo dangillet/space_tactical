@@ -41,10 +41,10 @@ class Mod(object):
         self.ship = ship
     
     def use(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def reverse(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 class Slot(object):
     def __init__(self, ship, slot_type, max_count):
@@ -195,21 +195,6 @@ class Weapon(Mod):
     def reverse(self):
         pass
     
-    def display(self):
-        "Display the weapon in the formatted text style"
-        return _("""
-{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
-{.tab_stops [150]}
-Energy type: %s{#x09}Range: %d{}
-Precision: %d%%{#x09}Damage: %r {}
-Temperature: %s%d%s{#x09}Heating: %d {}
-Reliability: %d%%{}
-""") % (self.weapon_type, EnergyType.name(self.energy_type), self.range,
-        self.precision*100, self.damage, 
-        "{color (255, 0, 0, 255)}" if self.temperature >= 100 else "",
-        self.temperature, "{color (255, 255, 255, 255)}", self.heating,
-        self.reliability*100)
-    
     def __repr__(self):
         return """
 %s
@@ -276,31 +261,6 @@ class Ship(cocos.sprite.Sprite):
         else:
             return None
 
-    def display(self):
-        "Display the ship and its weapons in the formatted text style"
-        shield = " - ".join(["%d/%s" % (pr, EnergyType.name(en_idx)) for en_idx, pr in self.shield.iteritems() if pr != 0])
-        s =  _("""
-{font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
-{font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
-""") % (self.ship_type, self.speed, self.hull, shield)
-        if self.weapon is not None:
-            s += _("""
-{underline [255, 255, 255, 255]}Weapon{underline None}: {}
-%s""") % (self.weapon.display())
-        return s
-    
-    def __repr__(self):
-        shield = " - ".join(["%d/%s" % (pr, EnergyType.names[en_idx]) for en_idx, pr in self.shield.iteritems()])
-        s = """
-%s
-Speed: %d\tHull: %d\tShield: %s
-""" % (self.ship_type, self.speed, self.hull, shield)
-        if self.weapon is not None:
-            s += """
-    Weapon:
-    %s""" % (self.weapon)
-        return s
-    
     # Need to change this to a setter of self.weapon
     def change_weapon(self, idx):
         self.weapon_idx = idx
