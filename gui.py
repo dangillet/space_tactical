@@ -53,7 +53,11 @@ class InfoLayer(cocos.layer.ColorLayer):
                       ox+x, oy)),
             ('c4B', (255, 255, 255, 255)*4 ))
         
-    
+    def on_exit(self):
+        super(InfoLayer, self).on_exit()
+        self._border_vertex_list.delete()
+        self._border_vertex_list = None
+        
     def draw(self, *args, **kwargs):
         super(InfoLayer, self).draw(*args, **kwargs)
         glPushMatrix()
