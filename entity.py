@@ -140,7 +140,7 @@ class BoostWeaponDamage(Mod):
     def use(self):
         self.used = True
         self.weapon_idx = self.ship.weapon_idx
-        damage = self.ship.weapons[self.weapon_idx].damage
+        damage = self.ship.weapon.damage
         damage.min += 5
         damage.max += 5
         self.ship.dispatch_event("on_change")
