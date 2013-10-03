@@ -113,15 +113,19 @@ class ShipMod(cocos.layer.Layer):
 
 class SlotMenu(gui.SubMenu):
     def __init__(self, slot, hmargin):
-        super(SlotMenu, self).__init__(slot.type)
+        self.slot = slot
+        title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
+                                                self.slot.max_count)
+        super(SlotMenu, self).__init__(title)
         w, h = director.get_window_size()
         set_fonts(self)
+        self.font_title['font_size'] = 20
         self.font_item['font_size'] = self.font_item_selected ['font_size'] = 12
         self.menu_halign = LEFT
         self.menu_valign = TOP
         self.menu_hmargin = hmargin
         self.menu_vmargin = 400
-        self.slot = slot
+        
 
     def on_enter(self):
         super(SlotMenu, self).on_enter()
@@ -144,6 +148,8 @@ class SlotMenu(gui.SubMenu):
         l = [MenuItem(mod.name, self.parent.on_mod_deselected, mod) for mod in self.slot.mods]
         if not l:
             l = [MenuItem("None", None)]
+        self.title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
+                                                self.slot.max_count)
         self.create_menu(l)
 
 class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
