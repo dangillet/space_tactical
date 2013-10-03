@@ -19,5 +19,10 @@
             "type": "Destroyer",
             "count": 2
         }
+    ],
+    "inventory":
+    [
+        ["ModSpeed", 1],
+        ["ModShield", 1, "URANIUM", 2]
     ]
 }

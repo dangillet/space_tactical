@@ -43,6 +43,17 @@ def set_fonts(menu):
 class ShipMod(cocos.layer.Layer):
     def __init__(self):
         super(ShipMod, self).__init__()
+        self.ships_factory = entity.ShipFactory()
+        with open("player.json") as f:
+            data = json.load(f)
+            self.player = entity.Player(data['name'])
+            for ship_data in data['fleet']:
+                    quantity = ship_data.get("count", 1)
+                    for i in range(quantity):
+                        mods = ship_data.get("mods", [])
+                        ship = self.ships_factory.create_ship(ship_data['type'],
+                                                                mods =mods)
+                        self.player.add_ship(ship)
         self.add(ShipList(), name="ship_list")
         w, h = director.get_window_size()
         self.add(cocos.text.Label("Ship Modifications",
@@ -54,8 +65,9 @@ class ShipMod(cocos.layer.Layer):
                                 x=w//2,
                                 y=h)
                 )
-        self.ship_info = gui.ShipInfoLayer((300, h-400 ), 400, 300, show_all_weapons=True)
+        self.ship_info = gui.ShipInfoLayer((250, h-400 ), 550, 300, show_all_weapons=True)
         self.add(self.ship_info, name="ship_info")
+        
     
     def on_enter(self):
         super(ShipMod, self).on_enter()
@@ -110,23 +122,13 @@ class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
         self.menu_hmargin = 20
         self.menu_vmargin = 100
         set_fonts(self)
-        self.ships_factory = entity.ShipFactory()
     
     def on_enter(self):
         super(ShipList, self).on_enter()
         self.buttons = []
-        with open("player.json") as f:
-            data = json.load(f)
-            self.player = entity.Player(data['name'])
-            for ship_data in data['fleet']:
-                    quantity = ship_data.get("count", 1)
-                    for i in range(quantity):
-                        mods = ship_data.get("mods", [])
-                        ship = self.ships_factory.create_ship(ship_data['type'],
-                                                                mods =mods)
-                        self.player.add_ship(ship)
-                        ship_button = MenuItem(ship.ship_type, self.dispatch_event, "on_selected", ship)
-                        self.buttons.append(ship_button)
+        for ship in self.parent.player.fleet:
+            ship_button = MenuItem(ship.ship_type, self.dispatch_event, "on_selected", ship)
+            self.buttons.append(ship_button)
         self.buttons.append( MenuItem("Go to the Battle", self.on_quit) )
         self.create_menu(self.buttons, selected_effect=zoom_in(),
                           unselected_effect=zoom_out())
