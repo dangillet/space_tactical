@@ -185,6 +185,10 @@ Reliability: %d%%{}
     def on_weapon_jammed(self, weapon):
         self.update()
 
+class ShipList(InfoLayer):
+    def __init__(self, position, width, height):
+        super(ShipList, self).__init__(position, width, height)
+
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):
         super(MenuLayer, self).__init__(*BACKGROUND, width=width, height=height)

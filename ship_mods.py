@@ -1,10 +1,12 @@
+import json
+
 import cocos
 
 from cocos.menu import *
 from cocos.scenes import *
 from cocos.director import director
 
-import battle, gui
+import battle, gui, entity
 
 
 
@@ -48,20 +50,27 @@ class ShipMod(Menu):
             'color':(192,192,0,255),
             'dpi':96,
         }
-        
-        self.exit_button = MenuItem("Go to the Battle", None)
-        self.create_menu([self.exit_button])
+        self.ships_factory = entity.ShipFactory()
+        exit_button = MenuItem("Go to the Battle", self.on_quit)
+        self.create_menu([exit_button])
+        self.ship_list = gui.ShipList((50, 600), 200, 500)
     
     def on_enter(self):
         super(ShipMod, self).on_enter()
+        with open("player.json") as f:
+            data = json.load(f)
+            self.player = entity.Player(data['name'])
+            for ship_data in data['fleet']:
+                    quantity = ship_data.get("count", 1)
+                    for i in range(quantity):
+                        mods = ship_data.get("mods")
+                        ship = self.ships_factory.create_ship(ship_data['type'],
+                                                                mods =mods)
+                        self.player.add_ship(ship)
+        #self.ship_list.set_model(self.player.fleet)
+        
+    def on_quit(self):
         my_battle = battle.Battle()
-        battle_scene = cocos.scene.Scene(my_battle)
-        transition = FadeTransition(battle_scene, duration = 5, color=(0,0,0), src=director.scene)
-        self.exit_button.callback_func = director.replace
-        self.exit_button.callback_args = (transition,)
-        
-        
-    def on_exit(self):
-        super(ShipMod, self).on_exit()
-        #self.remove([child self.children])
+        battle_scene = cocos.scene.Scene(my_battle) 
+        director.replace(FadeTransition(battle_scene, duration = 3))
         
