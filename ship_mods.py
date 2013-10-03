@@ -58,6 +58,7 @@ class ShipMod(cocos.layer.Layer):
             for mod in data['inventory']:
                 self.mods.append(self.ships_factory.create_mod(mod))
         self.add(ShipList(), name="ship_list")
+        self.selected = None
         w, h = director.get_window_size()
         self.add(cocos.text.Label("Ship Modifications",
                                 font_name = "Classic Robot",
@@ -70,7 +71,7 @@ class ShipMod(cocos.layer.Layer):
                 )
         self.ship_info = gui.ShipInfoLayer((250, h-400 ), 550, 300, show_all_weapons=True)
         self.add(self.ship_info, name="ship_info")
-        self.add(ModList())
+        self.add(ModList(), name="mod_list")
         
     
     def on_enter(self):
@@ -82,6 +83,7 @@ class ShipMod(cocos.layer.Layer):
         self.get("ship_list").pop_handlers()
         
     def on_selected(self, ship):
+        self.selected = ship
         self.ship_info.set_model( ship )
         try:
             self.remove("slot_menu_mob")
@@ -98,7 +100,16 @@ class ShipMod(cocos.layer.Layer):
     
     def on_mod_selected(self, mod):
         ship_list = self.get("ship_list")
-        self.player.fleet[ship_list.selected_index].add_mod(mod)
+        if self.selected.add_mod(mod):
+            self.mods.remove(mod)
+            self.get("mod_list").on_change()
+    
+    def on_mod_deselected(self, mod):
+        ship_list = self.get("ship_list")
+        self.selected.remove_mod(mod)
+        self.mods.append(mod)
+        self.get("mod_list").on_change()
+        
 
 class SlotMenu(gui.SubMenu):
     def __init__(self, slot, hmargin):
@@ -110,28 +121,27 @@ class SlotMenu(gui.SubMenu):
         self.menu_valign = TOP
         self.menu_hmargin = hmargin
         self.menu_vmargin = 400
-        
         self.slot = slot
-        
-        l = [MenuItem(mod.name, None) for mod in self.slot.mods]
-        if not l:
-            l = [MenuItem("None", None)]
-        self.create_menu(l)
-    
+
     def on_enter(self):
         super(SlotMenu, self).on_enter()
         self.slot.ship.push_handlers(self)
+        l = [MenuItem(mod.name, self.parent.on_mod_deselected, mod) for mod in self.slot.mods]
+        if not l:
+            l = [MenuItem("None", None)]
+        self.create_menu(l)
         
     def on_exit(self):
         super(SlotMenu, self).on_exit()
         self.slot.ship.pop_handlers()
+        map(self.remove, (child for z,child in self.children) )
         
     def on_key_press(self, s, m):
         return False
     
     def on_change(self):
         map(self.remove, (child for z,child in self.children) )
-        l = [MenuItem(mod.name, None) for mod in self.slot.mods]
+        l = [MenuItem(mod.name, self.parent.on_mod_deselected, mod) for mod in self.slot.mods]
         if not l:
             l = [MenuItem("None", None)]
         self.create_menu(l)
@@ -194,3 +204,6 @@ class ModList(gui.SubMenu):
     def on_key_press(self, s, m):
         return False
 
+    def on_change(self):
+        self.on_exit()
+        self.on_enter()

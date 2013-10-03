@@ -66,6 +66,7 @@ class Slot(event.EventDispatcher):
         self.mods.remove(mod)
         mod.reverse()
         mod.ship = None
+        self.dispatch_event("on_change")
 
 Slot.register_event_type("on_change")
 
@@ -292,6 +293,10 @@ Weapon:
             self.dispatch_event("on_change")
             return True
         return False
+    
+    def remove_mod(self, mod):
+        self.slots[mod.type].remove_mod(mod)
+        self.dispatch_event("on_change")
     
     def reset_turn(self):
         self.turn_completed = False
