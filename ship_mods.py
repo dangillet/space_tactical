@@ -120,7 +120,7 @@ class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
             for ship_data in data['fleet']:
                     quantity = ship_data.get("count", 1)
                     for i in range(quantity):
-                        mods = ship_data.get("mods")
+                        mods = ship_data.get("mods", [])
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         self.player.add_ship(ship)

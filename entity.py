@@ -224,7 +224,7 @@ Reliability: %d%%
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, slots, speed, hull,
-                shield, weapons):
+                shield):
         """
             Initialize the Ship
             player: Player
@@ -246,8 +246,6 @@ class Ship(cocos.sprite.Sprite):
         self.slots = { slot_type: Slot(self, slot_type, max_count) 
                         for slot_type, max_count in slots.iteritems() }
         
-        for weapon in weapons:
-            self.add_mod(weapon)
         self.weapon_idx = 0
         
         self.turn_completed = False
@@ -418,22 +416,20 @@ class ShipFactory(object):
         # And load the different mods classes
         self.ModKlasses = [ModSpeed, ModShield, ModWeapon]
     
-    def create_ship(self, ship_type, mods=None):
+    def create_ship(self, ship_type, mods=[]):
         "Create a new ship of type ship_type"
         # The last element in the ship definition is the list of weapons
-        weapons = []
-        for weapon_type in self.ships[ship_type][-1]:
-            weapons.append(self.create_weapon(weapon_type))
-        # Take all args except the last, and replace it with the constructed weapon
-        ship = Ship(*self.ships[ship_type][:-1], weapons=weapons)
-        # If there are mods, apply them
+        mods.extend(self.ships[ship_type][-1])
+        # Take all args except the last
+        ship = Ship(*self.ships[ship_type][:-1])
+        # Apply mods
         for mod in mods or []: # If mods is None, we pass an empty list
-            mod = mod[:]
-            mod_name = mod.pop(0)
-            if mod_name in self.weapons:
-                weapon = self.create_weapon(mod_name)
+            if isinstance(mod, basestring) and mod in self.weapons:
+                weapon = self.create_weapon(mod)
                 ship.add_mod(weapon)
             else:
+                mod = mod[:]
+                mod_name = mod.pop(0)
                 for ModKlass in self.ModKlasses:
                     if ModKlass.__name__ == mod_name:
                         mod_instance = ModKlass(*mod, sf=self)

@@ -68,7 +68,7 @@ class Battle(cocos.layer.Layer):
                 for ship_data in player_data['fleet']:
                     quantity = ship_data.get("count", 1)
                     for _ in range(quantity):
-                        mods = ship_data.get("mods")
+                        mods = ship_data.get("mods", [])
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         ship.scale = float(grid.CELL_WIDTH) / ship.width
