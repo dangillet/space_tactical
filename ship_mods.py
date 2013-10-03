@@ -8,31 +8,49 @@ from cocos.director import director
 
 import battle, gui, entity
 
-
-
-class ShipMod(Menu):
+class ShipMod(cocos.layer.Layer):
     def __init__(self):
         super(ShipMod, self).__init__()
+        self.add(ShipList(), "ship_list")
         w, h = director.get_window_size()
-        self.title = _("""Ship modifications""")
+        self.add(cocos.text.Label("Ship Modifications",
+                                font_name = "Classic Robot",
+                                font_size = 36,
+                                color = (200, 200, 200, 255),
+                                anchor_y = "top",
+                                anchor_x = "center",
+                                x=w//2,
+                                y=h)
+                )
+        self.ship_info = gui.ShipInfoLayer((300, 200), 400, 300)
+        self.add(self.ship_info, "ship_info")
+
+class ShipList(Menu):
+    def __init__(self):
+        super(ShipList, self).__init__()
         
+        self.title = _("""Fleet""")
+        self.menu_halign = LEFT
+        self.menu_valign = TOP
+        self.menu_hmargin = 20
+        self.menu_vmargin = 100
         #
         # Menu font options
         #
         self.font_title = {
             'font_name':'Classic Robot',
-            'font_size':36,
+            'font_size':28,
             'color':(200, 200, 200, 255),
             'bold':False,
             'italic':False,
             'anchor_y':'top',
-            'anchor_x':'center',
+            'anchor_x':'left',
             'dpi':96,
-            'x':w/2, 'y':h,
+            'x':0, 'y':0,
         }
         self.font_item= {
             'font_name':'Classic Robot',
-            'font_size':12,
+            'font_size':16,
             'bold':False,
             'italic':False,
             'anchor_y':'center',
@@ -42,7 +60,7 @@ class ShipMod(Menu):
         }
         self.font_item_selected = {
             'font_name':'Classic Robot',
-            'font_size':12,
+            'font_size':16,
             'bold':False,
             'italic':False,
             'anchor_y':'center',
@@ -51,12 +69,12 @@ class ShipMod(Menu):
             'dpi':96,
         }
         self.ships_factory = entity.ShipFactory()
-        exit_button = MenuItem("Go to the Battle", self.on_quit)
-        self.create_menu([exit_button])
+        
         self.ship_list = gui.ShipList((50, 600), 200, 500)
     
     def on_enter(self):
-        super(ShipMod, self).on_enter()
+        super(ShipList, self).on_enter()
+        self.buttons = []
         with open("player.json") as f:
             data = json.load(f)
             self.player = entity.Player(data['name'])
@@ -67,10 +85,23 @@ class ShipMod(Menu):
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         self.player.add_ship(ship)
-        #self.ship_list.set_model(self.player.fleet)
+                        ship_button = MenuItem(ship.ship_type, self.show, ship)
+                        self.buttons.append(ship_button)
+        self.buttons.append( MenuItem("Go to the Battle", self.on_quit) )
+        self.create_menu(self.buttons, selected_effect=zoom_in(),
+                          unselected_effect=zoom_out())
+        # Reposition the menu title as default is in the middle of the page
+        self.title_label.x = self.menu_hmargin
+        self.title_label.y -= self.menu_vmargin - 20
+        
+    def on_exit(self):
+        super(ShipList, self).on_exit()
+        map(self.remove, (child for z,child in self.children) )
         
     def on_quit(self):
         my_battle = battle.Battle()
         battle_scene = cocos.scene.Scene(my_battle) 
         director.replace(FadeTransition(battle_scene, duration = 3))
         
+    def show(self, ship):
+        self.parent.ship_info.set_model( ship )

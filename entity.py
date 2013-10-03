@@ -261,6 +261,18 @@ class Ship(cocos.sprite.Sprite):
         else:
             return None
 
+    def __repr__(self):
+        shield = " - ".join(["%d/%s" % (pr, EnergyType.names[en_idx]) for en_idx, pr in self.shield.iteritems()])
+        s = """
+%s
+Speed: %d\tHull: %d\tShield: %s
+""" % (self.ship_type, self.speed, self.hull, shield)
+        if self.weapon is not None:
+            s += """
+Weapon:
+%s""" % (self.weapon)
+        return s
+    
     # Need to change this to a setter of self.weapon
     def change_weapon(self, idx):
         self.weapon_idx = idx
