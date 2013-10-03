@@ -106,9 +106,9 @@ class ShipMod(cocos.layer.Layer):
     
     def on_mod_deselected(self, mod):
         ship_list = self.get("ship_list")
-        self.selected.remove_mod(mod)
-        self.mods.append(mod)
-        self.get("mod_list").on_change()
+        if self.selected.remove_mod(mod):
+            self.mods.append(mod)
+            self.get("mod_list").on_change()
         
 
 class SlotMenu(gui.SubMenu):

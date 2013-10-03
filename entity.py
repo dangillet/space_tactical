@@ -63,10 +63,14 @@ class Slot(event.EventDispatcher):
         return True
     
     def remove_mod(self, mod):
+        if mod.type == "weapon" and not [weapon for weapon in self.mods if 
+                (weapon != mod and weapon.reliability == 1.0)]:
+            return False
         self.mods.remove(mod)
         mod.reverse()
         mod.ship = None
         self.dispatch_event("on_change")
+        return True
 
 Slot.register_event_type("on_change")
 
@@ -295,9 +299,11 @@ Weapon:
         return False
     
     def remove_mod(self, mod):
-        self.slots[mod.type].remove_mod(mod)
-        self.dispatch_event("on_change")
-    
+        if self.slots[mod.type].remove_mod(mod):
+            self.dispatch_event("on_change")
+            return True
+        return False
+        
     def reset_turn(self):
         self.turn_completed = False
         self.move_completed = False

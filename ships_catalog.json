@@ -15,7 +15,7 @@
       "precision": 0.6,
       "rate of fire": "2/3",
       "reliability": 0.9,
-      "energy_type": "URANIUM",
+      "energy_type": "PLASMA",
       "damage": [10,15]
     },
     {
@@ -24,8 +24,17 @@
       "precision": 0.5,
       "rate of fire": "1/2",
       "reliability": 0.9,
-      "energy_type": "SONIC",
+      "energy_type": "PLASMA",
       "damage": [15,20]
+    },
+    {
+      "weapon_type": "SunBeam 1",
+      "range": 5,
+      "precision": 0.8,
+      "rate of fire": "1/1",
+      "reliability": 1.0,
+      "energy_type": "URANIUM",
+      "damage": [6,9]
     }
   ],
   
@@ -64,7 +73,7 @@
               {"pr":20, "energy_type":"URANIUM"},
               {"pr":10, "energy_type":"PLASMA"}
           ],
-      "weapons": ["Laser 2", "Laser 3"]
+      "weapons": ["SunBeam 1", "Laser 3"]
     }
   ]
 }
