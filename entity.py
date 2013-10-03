@@ -73,6 +73,7 @@ class ModSpeed(Mod):
         super(ModSpeed, self).__init__()
         self.level = level
         self.type = "mobility"
+        self.name += " +%i" % (self.level)
     
     def use(self):
         self.ship.speed += self.level
@@ -103,6 +104,7 @@ class ModShield(Mod):
         self.energy_type = EnergyType.names.index(energy_type)
         self.pr = pr
         self.type = "defense"
+        self.name += " %i/%s" %(self.pr, EnergyType.name(self.energy_type))
     
     def use(self):
         if self.energy_type in self.ship.shield:

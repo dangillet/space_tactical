@@ -85,6 +85,7 @@ class SlotMenu(gui.SubMenu):
         super(SlotMenu, self).__init__(slot.type)
         w, h = director.get_window_size()
         set_fonts(self)
+        self.font_item['font_size'] = self.font_item_selected ['font_size'] = 12
         self.menu_halign = LEFT
         self.menu_valign = TOP
         self.menu_hmargin = hmargin
