@@ -5,6 +5,7 @@ from cocos.menu import *
 import pyglet
 import pyglet.text as text
 from pyglet.gl import *
+from pyglet import font
 
 import entity
 
@@ -145,9 +146,10 @@ class ScrollableInfoLayer(InfoLayer):
         return True
 
 class ShipInfoLayer(InfoLayer):
-    def __init__(self, position, width, height):
+    def __init__(self, position, width, height, show_all_weapons=False):
         super(ShipInfoLayer, self).__init__(position, width, height)
-    
+        self.show_all_weapons = show_all_weapons
+        
     def display_model(self):
         "Display the ship and its weapons in the formatted text style"
         model = self.model
@@ -157,9 +159,15 @@ class ShipInfoLayer(InfoLayer):
 {font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
 {font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
 """) % (model.ship_type, model.speed, model.hull, shield)
-        if model.weapon is not None:
-            weapon = model.weapon
-            s += _("""
+        if self.show_all_weapons:
+            for weapon in model.slots['weapon'].mods:
+                s += self._display_weapon(weapon)
+        elif model.weapon is not None:
+            s += self._display_weapon(model.weapon)
+        return s
+    
+    def _display_weapon(self, weapon):
+        return _("""
 {color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
 {.tab_stops [150]}
 Energy type: %s{#x09}Range: %d{}
@@ -171,8 +179,7 @@ Reliability: %d%%{}
         "{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",
         weapon.temperature, "{color (255, 255, 255, 255)}", weapon.heating,
         weapon.reliability*100)
-        return s
-    
+        
     def on_change(self):
         self.update()
     
@@ -185,9 +192,39 @@ Reliability: %d%%{}
     def on_weapon_jammed(self, weapon):
         self.update()
 
-class ShipList(InfoLayer):
-    def __init__(self, position, width, height):
-        super(ShipList, self).__init__(position, width, height)
+class SubMenu(Menu):
+    def __init__(self, title = ''):
+        super(SubMenu, self).__init__(title)
+    
+    def _generate_title(self):
+        width, height = director.get_window_size()
+        fo = font.load(self.font_item['font_name'], self.font_item['font_size'])
+        fo_height = int( (fo.ascent - fo.descent) * 0.9 )
+
+        if self.menu_halign == CENTER:
+            self.font_title['x'] = width // 2
+        elif self.menu_halign == RIGHT:
+            self.font_title['x'] = width - self.menu_hmargin
+        elif self.menu_halign == LEFT:
+            self.font_title['x'] = self.menu_hmargin
+        else:
+            raise Exception("Invalid anchor_x value for menu")
+        
+        self.font_title['anchor_x'] = self.menu_halign
+        self.font_title['anchor_y'] = "center"
+        self.font_title['text'] = self.title
+        self.title_label = pyglet.text.Label( **self.font_title )
+        self.title_height = self.title_label.content_height
+        
+        if self.menu_valign == CENTER:
+            self.title_label.y = (height + len(self.children) * fo_height + 
+                         self.title_height) * 0.5
+        elif self.menu_valign == TOP:
+            self.title_label.y = (height - self.menu_vmargin - self.title_height //2)
+        elif self.menu_valign == BOTTOM:
+            self.title_label.y = (0 + fo_height * (len(self.children)) +
+                         self.title_height + self.menu_vmargin)
+        
 
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):

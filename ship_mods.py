@@ -22,10 +22,18 @@ class ShipMod(cocos.layer.Layer):
                                 x=w//2,
                                 y=h)
                 )
-        self.ship_info = gui.ShipInfoLayer((300, 200), 400, 300)
+        self.ship_info = gui.ShipInfoLayer((300, 200), 400, 300, show_all_weapons=True)
         self.add(self.ship_info, "ship_info")
+        
+        self.add(SlotMenu())
 
-class ShipList(Menu):
+class SlotMenu(Menu):
+    def __init__(self):
+        super(SlotMenu, self).__init__()
+        l = [MenuItem("Test 1", None), MenuItem("Test 2", None)]
+        self.create_menu(l)
+
+class ShipList(gui.SubMenu):
     def __init__(self):
         super(ShipList, self).__init__()
         
@@ -40,13 +48,7 @@ class ShipList(Menu):
         self.font_title = {
             'font_name':'Classic Robot',
             'font_size':28,
-            'color':(200, 200, 200, 255),
-            'bold':False,
-            'italic':False,
-            'anchor_y':'top',
-            'anchor_x':'left',
-            'dpi':96,
-            'x':0, 'y':0,
+            'color':(200, 200, 200, 255)
         }
         self.font_item= {
             'font_name':'Classic Robot',
@@ -69,8 +71,6 @@ class ShipList(Menu):
             'dpi':96,
         }
         self.ships_factory = entity.ShipFactory()
-        
-        self.ship_list = gui.ShipList((50, 600), 200, 500)
     
     def on_enter(self):
         super(ShipList, self).on_enter()
@@ -91,8 +91,8 @@ class ShipList(Menu):
         self.create_menu(self.buttons, selected_effect=zoom_in(),
                           unselected_effect=zoom_out())
         # Reposition the menu title as default is in the middle of the page
-        self.title_label.x = self.menu_hmargin
-        self.title_label.y -= self.menu_vmargin - 20
+        #self.title_label.x = self.menu_hmargin
+        #self.title_label.y -= self.menu_vmargin - 20
         
     def on_exit(self):
         super(ShipList, self).on_exit()
