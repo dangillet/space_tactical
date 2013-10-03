@@ -183,7 +183,7 @@ ship.{}
             self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
-        self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.weapon_type)
+        self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.name)
     
     def on_damage(self, ship, dmg):
         self.msg += _("HIT! %s took %d points of damage. {}\n") % (ship.ship_type, dmg)
@@ -313,7 +313,7 @@ class ShipSelected(StaticGamePhase):
                 if weapon.temperature >= 100.:
                     msg = PROMPT + _("""{font_name 'Classic Robot'}
 {font_size 10}{color [255, 0, 0, 255]}Cannot fire with %s. It's overheating.
-""") % (weapon.weapon_type)
+""") % (weapon.name)
                     self.battle.log_info.prepend_text(msg)
                 else:
                     self.battle.push_game_phase(Attack(self.battle, entity))

@@ -174,7 +174,7 @@ Energy type: %s{#x09}Range: %d{}
 Precision: %d%%{#x09}Damage: %r {}
 Temperature: %s%d%s{#x09}Heating: %d {}
 Reliability: %d%%{}
-""") % (weapon.weapon_type, entity.EnergyType.name(weapon.energy_type), weapon.range,
+""") % (weapon.name, entity.EnergyType.name(weapon.energy_type), weapon.range,
         weapon.precision*100, weapon.damage, 
         "{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",
         weapon.temperature, "{color (255, 255, 255, 255)}", weapon.heating,
@@ -358,7 +358,7 @@ class WeaponMenu(ShipMenu):
         weapons = ship.slots['weapon'].mods
         l = []
         for idx, weapon in enumerate(weapons):
-            l.append(MenuItemDisableable(weapon.weapon_type, ship.change_weapon, idx,
+            l.append(MenuItemDisableable(weapon.name, ship.change_weapon, idx,
                     disabled = weapon.is_inop))
         self.create_menu(l, layout_strategy=horizontalMenuLayout)
         if self.ship.weapon is not None:

@@ -179,7 +179,7 @@ class Weapon(Mod):
         "dmg is a list with min and max values."
         super(Weapon, self).__init__()
         self.type = "weapon"
-        self.weapon_type = weapon_type
+        self.name = weapon_type
         self.range = weapon_range
         self.precision = precision
         self.heating = float(100 / rof)
@@ -202,7 +202,7 @@ Energy type: %s\tRange: %d
 Precision: %d%%\tDamage: %r
 Temperature: %d\tHeating: %d
 Reliability: %d%%
-""" % (self.weapon_type, EnergyType.name(self.energy_type), self.range,
+""" % (self.name, EnergyType.name(self.energy_type), self.range,
         self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
 
     def hit(self):
