@@ -46,7 +46,7 @@ class Mod(object):
     def reverse(self):
         raise NotImplementedError
 
-class Slot(object):
+class Slot(event.EventDispatcher):
     def __init__(self, ship, slot_type, max_count):
         self.ship = ship
         self.type = slot_type
@@ -59,12 +59,15 @@ class Slot(object):
         mod.ship = self.ship
         self.mods.append(mod)
         mod.use()
+        self.dispatch_event("on_change")
         return True
     
     def remove_mod(self, mod):
         self.mods.remove(mod)
         mod.reverse()
         mod.ship = None
+
+Slot.register_event_type("on_change")
 
 class ModSpeed(Mod):
     name = _("Speed")
@@ -285,7 +288,10 @@ Weapon:
             self.dispatch_event("on_boost_use")
             
     def add_mod(self, mod):
-        return self.slots[mod.type].add_mod(mod)
+        if self.slots[mod.type].add_mod(mod):
+            self.dispatch_event("on_change")
+            return True
+        return False
     
     def reset_turn(self):
         self.turn_completed = False
@@ -426,18 +432,21 @@ class ShipFactory(object):
         ship = Ship(*self.ships[ship_type][:-1])
         # Apply mods
         for mod in mods or []: # If mods is None, we pass an empty list
-            if isinstance(mod, basestring) and mod in self.weapons:
-                weapon = self.create_weapon(mod)
-                ship.add_mod(weapon)
-            else:
-                mod = mod[:]
-                mod_name = mod.pop(0)
-                for ModKlass in self.ModKlasses:
-                    if ModKlass.__name__ == mod_name:
-                        mod_instance = ModKlass(*mod, sf=self)
-                        ship.add_mod(mod_instance)
-                        break
+            mod_instance = self.create_mod(mod)
+            ship.add_mod(mod_instance)
         return ship
+    
+    def create_mod(self, mod):
+        if isinstance(mod, basestring) and mod in self.weapons:
+            weapon = self.create_weapon(mod)
+            return weapon
+        else:
+            mod = mod[:]
+            mod_name = mod.pop(0)
+            for ModKlass in self.ModKlasses:
+                if ModKlass.__name__ == mod_name:
+                    mod_instance = ModKlass(*mod, sf=self)
+                    return mod_instance
     
     def create_weapon(self, weapon_type):
         weapon_args = self.weapons[weapon_type]
