@@ -1,88 +1,28 @@
 {
-  "fleet": [
-    {
-      "mods": [
-        "Laser 1", 
-        [
-          "ModShield", 
-          1, 
-          "URANIUM", 
-          2
-        ], 
-        [
-          "ModSpeed", 
-          1
-        ]
-      ], 
-      "type": "Fighter"
-    }, 
-    {
-      "mods": [
-        "Laser 2", 
-        "Laser 1", 
-        [
-          "ModShield", 
-          1, 
-          "URANIUM", 
-          2
-        ], 
-        [
-          "ModSpeed", 
-          1
-        ]
-      ], 
-      "type": "Fighter"
-    }, 
-    {
-      "mods": [
-        "Laser 2", 
-        "Laser 1", 
-        [
-          "ModShield", 
-          1, 
-          "URANIUM", 
-          2
-        ], 
-        [
-          "ModSpeed", 
-          1
-        ]
-      ], 
-      "type": "Fighter"
-    }, 
-    {
-      "mods": [
-        "SunBeam 1", 
-        "Laser 3", 
-        "Laser 2", 
-        [
-          "ModShield", 
-          1, 
-          "URANIUM", 
-          2
-        ], 
-        [
-          "ModSpeed", 
-          1
-        ]
-      ], 
-      "type": "Cruiser"
-    }, 
-    {
-      "mods": [
-        "Laser 1", 
-        "Laser 3"
-      ], 
-      "type": "Destroyer"
-    }, 
-    {
-      "mods": [
-        "Laser 1", 
-        "Laser 3"
-      ], 
-      "type": "Destroyer"
-    }
-  ], 
-  "name": "Daniel", 
-  "inventory": []
+    "name": "Daniel",
+    "fleet": 
+    [
+        {
+            "type": "Fighter",
+            "mods": 
+            [
+                ["ModSpeed", 1],
+                ["ModShield", 1, "URANIUM", 2],
+                "Laser 2"
+            ],
+            "count": 3
+        },
+        {
+            "type": "Cruiser"
+        },
+        {
+            "type": "Destroyer",
+            "count": 2
+        }
+    ],
+    "inventory":
+    [
+        ["ModSpeed", 1],
+        ["ModShield", 1, "URANIUM", 2]
+    ]
 }

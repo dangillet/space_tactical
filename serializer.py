@@ -1,6 +1,7 @@
 import json, entity
 
 class SpaceEncoder(json.JSONEncoder):
+    "JSON encoder for the player class"
     def default(self, o):
         if isinstance(o, entity.Player):
             return {'name':o.name, 'fleet':o.fleet, 'inventory':o.inventory}

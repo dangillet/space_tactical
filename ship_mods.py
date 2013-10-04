@@ -11,6 +11,7 @@ from cocos.director import director
 import battle, gui, entity, serializer
 
 def set_fonts(menu):
+    "Called from a menu to set the default fonts used"
     #
     # Menu font options
     #
@@ -41,25 +42,18 @@ def set_fonts(menu):
     }
 
 class ShipMod(cocos.layer.Layer):
+    "Layer containing the different menu elements"
     def __init__(self):
         super(ShipMod, self).__init__()
-        self.ships_factory = entity.ShipFactory()
-        with open("player.json") as f:
-            data = json.load(f)
-            self.player = entity.Player(data['name'])
-            for ship_data in data['fleet']:
-                    quantity = ship_data.get("count", 1)
-                    for i in range(quantity):
-                        mods = ship_data.get("mods", [])
-                        ship = self.ships_factory.create_ship(ship_data['type'],
-                                                                mods =mods)
-                        self.player.add_ship(ship)
-            self.inventory = self.player.inventory
-            for mod in data['inventory']:
-                self.inventory.append(self.ships_factory.create_mod(mod))
+        self.player = entity.Player.load()
+        self.inventory = self.player.inventory
+
+        w, h = director.get_window_size()
+        # The fleet list
         self.add(ShipList(), name="ship_list")
         self.selected = None
-        w, h = director.get_window_size()
+        
+        # Page title
         self.add(cocos.text.Label("Ship Modifications",
                                 font_name = "Classic Robot",
                                 font_size = 36,
@@ -69,8 +63,10 @@ class ShipMod(cocos.layer.Layer):
                                 x=w//2,
                                 y=h)
                 )
+        # The ship display window
         self.ship_info = gui.ShipInfoLayer((250, h-400 ), 550, 300, show_all_weapons=True)
         self.add(self.ship_info, name="ship_info")
+        # The list of modifications in inventory
         self.add(ModList(), name="mod_list")
         
     

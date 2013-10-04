@@ -385,6 +385,26 @@ class Player(object):
         """Ends the round of the player"""
         for ship in self.fleet:
             ship.turn_completed = True
+    
+    @classmethod
+    def load(cls):
+        "Loads the player from player.json file"
+        with open("player.json") as f:
+            ships_factory = ShipFactory()
+            data = json.load(f)
+            player = Player(data['name'])
+            for ship_data in data['fleet']:
+                    quantity = ship_data.get("count", 1)
+                    for i in range(quantity):
+                        mods = ship_data.get("mods", [])
+                        ship = ships_factory.create_ship(ship_data['type'],
+                                                                mods =mods)
+                        player.add_ship(ship)
+            
+            for mod in data['inventory']:
+                player.inventory.append(ships_factory.create_mod(mod))
+            return player
+        return None
 
 class Asteroid(cocos.sprite.Sprite):
     def __init__(self, image, *args, **kwargs):
@@ -414,7 +434,8 @@ class ShipFactory(object):
                      v['precision'],
                      fractions.Fraction(v['rate of fire']),
                      v['reliability'],
-                     EnergyType.names.index(v['energy_type']), # The index of the energy type in the list of energies
+                     # The index of the energy type in the list of energies
+                     EnergyType.names.index(v['energy_type']), 
                      v['damage'],
                     )
             # Read all the ships
@@ -437,7 +458,7 @@ class ShipFactory(object):
         self.ModKlasses = [ModSpeed, ModShield, ModWeapon]
     
     def create_ship(self, ship_type, mods=[]):
-        "Create a new ship of type ship_type"
+        "Create a new ship of type ship_type with its mods"
         # Only if there are no mods, we equip the ship with the default weapons
         if not mods:
             # The last element in the ship definition is the list of weapons
@@ -451,11 +472,12 @@ class ShipFactory(object):
         return ship
     
     def create_mod(self, mod):
+        "Creates a mod which could be a weapon"
         if isinstance(mod, basestring) and mod in self.weapons:
             weapon = self.create_weapon(mod)
             return weapon
         else:
-            mod = mod[:]
+            mod = mod[:] #Need a copy as we alter the list
             mod_name = mod.pop(0)
             for ModKlass in self.ModKlasses:
                 if ModKlass.__name__ == mod_name:
