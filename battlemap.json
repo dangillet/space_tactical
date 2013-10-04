@@ -17,29 +17,6 @@
   "players":
   [
       {
-        "name": "Daniel",
-        "fleet": 
-        [
-            {
-                "type": "Fighter",
-                "mods": 
-                [
-                    ["ModSpeed", 1],
-                    ["ModShield", 1, "URANIUM", 2],
-                    "Laser 2"
-                ],
-                "count": 3
-            },
-            {
-                "type": "Cruiser"
-            },
-            {
-                "type": "Destroyer",
-                "count": 2
-            }
-        ]
-      },
-      {
         "name": "Vincent",
         "fleet": 
         [

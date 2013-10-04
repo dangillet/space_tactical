@@ -40,6 +40,7 @@ class Battle(cocos.layer.Layer):
             INFO_WIDTH - 2*MARGIN, main.SCREEN_H - SHIP_INFO_HEIGHT - 3*MARGIN)
         self.add(self.log_info, z=5)
         self.msg = PROMPT
+        self.load_player()
         self.load_battlemap()
 
         # Player list
@@ -56,8 +57,6 @@ class Battle(cocos.layer.Layer):
         self.selected, self.targets = None, None
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
-        
-
     
     def load_battlemap(self):
         with open("battlemap.json") as f:
@@ -78,6 +77,13 @@ class Battle(cocos.layer.Layer):
             self.scroller = cocos.layer.ScrollingManager(ViewPort())
             self.scroller.add(self.battle_grid)
             self.add(self.scroller)
+    
+    def load_player(self):
+        player = entity.Player.load()
+        self.players.append(player)
+        for ship in player.fleet:
+            ship.scale = float(grid.CELL_WIDTH) / ship.width
+            ship.push_handlers(self)
     
     def change_game_phase(self, game_phase):
         "Change the state of the game."
