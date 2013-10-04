@@ -438,8 +438,10 @@ class ShipFactory(object):
     
     def create_ship(self, ship_type, mods=[]):
         "Create a new ship of type ship_type"
-        # The last element in the ship definition is the list of weapons
-        mods.extend(self.ships[ship_type][-1])
+        # Only if there are no mods, we equip the ship with the default weapons
+        if not mods:
+            # The last element in the ship definition is the list of weapons
+            mods = self.ships[ship_type][-1]
         # Take all args except the last
         ship = Ship(*self.ships[ship_type][:-1])
         # Apply mods

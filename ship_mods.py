@@ -44,7 +44,6 @@ class ShipMod(cocos.layer.Layer):
     def __init__(self):
         super(ShipMod, self).__init__()
         self.ships_factory = entity.ShipFactory()
-        self.mods = []
         with open("player.json") as f:
             data = json.load(f)
             self.player = entity.Player(data['name'])
@@ -204,7 +203,7 @@ class ModList(gui.SubMenu):
 
     def on_enter(self):
         super(ModList, self).on_enter()
-        l = [MenuItem(mod.name, self.parent.on_mod_selected, mod) for mod in self.parent.mods]
+        l = [MenuItem(mod.name, self.parent.on_mod_selected, mod) for mod in self.parent.inventory]
         if not l:
             l = [MenuItem("None", None)]
         self.create_menu(l)
