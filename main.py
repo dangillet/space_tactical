@@ -15,7 +15,6 @@ SCREEN_W, SCREEN_H = 1120, 630 #16/9 aspect ratio. Small enough for my laptop to
 
 import ship_mods
 
-
 def load_resource():
     pyglet.resource.path = ['res', 'res/images', 'res/fonts']
     pyglet.resource.reindex()

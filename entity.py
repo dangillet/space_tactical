@@ -315,7 +315,7 @@ Weapon:
             self.boost_used = False
     
     def attack(self, defender):
-        weapon = self.weapons[self.weapon_idx]
+        weapon = self.weapon
         weapon.fire()
         self.dispatch_event("on_change")
         if weapon.fumble():
