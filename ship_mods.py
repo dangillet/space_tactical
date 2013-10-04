@@ -8,7 +8,7 @@ from cocos.menu import *
 from cocos.scenes import *
 from cocos.director import director
 
-import battle, gui, entity
+import battle, gui, entity, serializer
 
 def set_fonts(menu):
     #
@@ -55,8 +55,9 @@ class ShipMod(cocos.layer.Layer):
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         self.player.add_ship(ship)
+            self.inventory = self.player.inventory
             for mod in data['inventory']:
-                self.mods.append(self.ships_factory.create_mod(mod))
+                self.inventory.append(self.ships_factory.create_mod(mod))
         self.add(ShipList(), name="ship_list")
         self.selected = None
         w, h = director.get_window_size()
@@ -101,13 +102,13 @@ class ShipMod(cocos.layer.Layer):
     def on_mod_selected(self, mod):
         ship_list = self.get("ship_list")
         if self.selected.add_mod(mod):
-            self.mods.remove(mod)
+            self.inventory.remove(mod)
             self.get("mod_list").on_change()
     
     def on_mod_deselected(self, mod):
         ship_list = self.get("ship_list")
         if self.selected.remove_mod(mod):
-            self.mods.append(mod)
+            self.inventory.append(mod)
             self.get("mod_list").on_change()
         
 
@@ -168,6 +169,7 @@ class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
         for ship in self.parent.player.fleet:
             ship_button = MenuItem(ship.ship_type, self.dispatch_event, "on_selected", ship)
             self.buttons.append(ship_button)
+        self.buttons.append( MenuItem("Save...", self.on_save) )
         self.buttons.append( MenuItem("Go to the Battle", self.on_quit) )
         self.create_menu(self.buttons, selected_effect=zoom_in(),
                           unselected_effect=zoom_out())
@@ -180,6 +182,10 @@ class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
         my_battle = battle.Battle()
         battle_scene = cocos.scene.Scene(my_battle) 
         director.replace(FadeTransition(battle_scene, duration = 3))
+    
+    def on_save(self):
+        with open("player.json", "w") as fp:
+            json.dump(self.parent.player, fp, cls=serializer.SpaceEncoder, indent=2)
         
     def show(self, ship):
         self.parent.ship_info.set_model( ship )

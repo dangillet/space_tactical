@@ -358,6 +358,7 @@ class Player(object):
          """
         self.name = name
         self.fleet = []
+        self.inventory = []
     
     def add_ship(self, ship):
         "Add a ship to the fleet"
