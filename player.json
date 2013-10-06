@@ -23,6 +23,7 @@
     "inventory":
     [
         ["ModSpeed", 1],
-        ["ModShield", 1, "URANIUM", 2]
+        ["ModShield", 1, "URANIUM", 2],
+        ["ModHull", 2]
     ]
 }

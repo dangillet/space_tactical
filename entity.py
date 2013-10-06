@@ -53,34 +53,6 @@ class Mod(object):
     def name(self):
         return ''
 
-class Slot(event.EventDispatcher):
-    def __init__(self, ship, slot_type, max_count):
-        self.ship = ship
-        self.type = slot_type
-        self.max_count = max_count
-        self.mods = []
-    
-    def add_mod(self, mod):
-        if len(self.mods) == self.max_count:
-            return False
-        mod.ship = self.ship
-        self.mods.append(mod)
-        mod.use()
-        self.dispatch_event("on_change")
-        return True
-    
-    def remove_mod(self, mod):
-        if mod.type == "weapon" and not [weapon for weapon in self.mods if 
-                (weapon != mod and weapon.reliability == 1.0)]:
-            return False
-        self.mods.remove(mod)
-        mod.reverse()
-        mod.ship = None
-        self.dispatch_event("on_change")
-        return True
-
-Slot.register_event_type("on_change")
-
 class ModSpeed(Mod):
     def __init__(self, level, sf):
         "sf: ShipFactory"
@@ -141,6 +113,108 @@ class ModShield(Mod):
         else:
             self.ship.shield[self.energy_type] -= self.pr
 
+class ModHull(Mod):
+    def __init__(self, level, sf):
+        super(ModHull, self).__init__()
+        self.level = level
+        self.hull_increase = self.level * 5
+        self.type = "defense"
+        
+    @property
+    def name(self):
+        return " ".join( (_("Hull"),
+                "+%i" %(self.hull_increase)) )
+    
+    def use(self):
+        self.ship.hull += self.hull_increase
+    
+    def reverse(self):
+        self.ship.hull -= self.hull_increase
+
+class Slot(event.EventDispatcher):
+    def __init__(self, ship, slot_type, max_count):
+        self.ship = ship
+        self.type = slot_type
+        self.max_count = max_count
+        self.mods = []
+    
+    def add_mod(self, mod):
+        if len(self.mods) == self.max_count:
+            return False
+        mod.ship = self.ship
+        self.mods.append(mod)
+        mod.use()
+        self.dispatch_event("on_change")
+        return True
+    
+    def remove_mod(self, mod):
+        if mod.type == "weapon" and not [weapon for weapon in self.mods if 
+                (weapon != mod and weapon.reliability == 1.0)]:
+            return False
+        self.mods.remove(mod)
+        mod.reverse()
+        mod.ship = None
+        self.dispatch_event("on_change")
+        return True
+
+Slot.register_event_type("on_change")
+
+class Weapon(Mod):
+    """
+    Weapon with all its caracteristics. 
+    """
+    def __init__( self, weapon_type, weapon_range, precision, rof,
+                  reliability, dmg_type, dmg):
+        "dmg is a list with min and max values."
+        super(Weapon, self).__init__()
+        self.type = "weapon"
+        self._name = weapon_type
+        self.range = weapon_range
+        self.precision = precision
+        self.heating = float(100 / rof)
+        self.temperature = 0
+        self.reliability = reliability
+        self.energy_type = dmg_type # index of the EnergyType.names list
+        self.damage = Damage(dmg[0], dmg[1])
+        self.is_inop = False
+    
+    @property
+    def name(self):
+        return self._name
+    
+    def use(self):
+        pass
+    
+    def reverse(self):
+        pass
+    
+    def __repr__(self):
+        return """
+%s
+Energy type: %s\tRange: %d
+Precision: %d%%\tDamage: %r
+Temperature: %d\tHeating: %d
+Reliability: %d%%
+""" % (self.name, EnergyType.name(self.energy_type), self.range,
+        self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
+
+    def hit(self):
+        "Returns True if the weapon hit."
+        return random.random() <= self.precision
+    
+    def fumble(self):
+        "Returns True if the weapon jammed."
+        if random.random() > self.reliability:
+            self.is_inop = True
+            return True
+        return False
+    
+    def fire(self):
+        self.temperature += self.heating
+    
+    def reset_turn(self):
+        self.temperature = max(0, self.temperature - COOLDOWN)
+
 class Boost(Mod):
     __metaclass__ = abc.ABCMeta
     def __init__(self, ship):
@@ -156,7 +230,6 @@ class Boost(Mod):
     @abc.abstractproperty
     def name(self):
         return ''
-    
 
 class BoostSpeed(Boost):
     def __init__(self, ship):
@@ -215,61 +288,6 @@ class BoostShield(Mod):
         for energy_type in self.ship.shield.iterkeys():
             self.ship.shield[energy_type] -= 5
 
-class Weapon(Mod):
-    """
-    Weapon with all its caracteristics. 
-    """
-    def __init__( self, weapon_type, weapon_range, precision, rof,
-                  reliability, dmg_type, dmg):
-        "dmg is a list with min and max values."
-        super(Weapon, self).__init__()
-        self.type = "weapon"
-        self._name = weapon_type
-        self.range = weapon_range
-        self.precision = precision
-        self.heating = float(100 / rof)
-        self.temperature = 0
-        self.reliability = reliability
-        self.energy_type = dmg_type # index of the EnergyType.names list
-        self.damage = Damage(dmg[0], dmg[1])
-        self.is_inop = False
-    
-    @property
-    def name(self):
-        return self._name
-    
-    def use(self):
-        pass
-    
-    def reverse(self):
-        pass
-    
-    def __repr__(self):
-        return """
-%s
-Energy type: %s\tRange: %d
-Precision: %d%%\tDamage: %r
-Temperature: %d\tHeating: %d
-Reliability: %d%%
-""" % (self.name, EnergyType.name(self.energy_type), self.range,
-        self.precision*100, self.damage, self.temperature, self.heating, self.reliability*100)
-
-    def hit(self):
-        "Returns True if the weapon hit."
-        return random.random() <= self.precision
-    
-    def fumble(self):
-        "Returns True if the weapon jammed."
-        if random.random() > self.reliability:
-            self.is_inop = True
-            return True
-        return False
-    
-    def fire(self):
-        self.temperature += self.heating
-    
-    def reset_turn(self):
-        self.temperature = max(0, self.temperature - COOLDOWN)
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, slots, speed, hull,
@@ -425,8 +443,8 @@ class Player(object):
         for ship in self.fleet:
             ship.turn_completed = True
     
-    @classmethod
-    def load(cls):
+    @staticmethod
+    def load():
         "Loads the player from player.json file"
         with open("player.json") as f:
             ships_factory = ShipFactory()
@@ -494,7 +512,7 @@ class ShipFactory(object):
                      v['weapons']
                     )
         # And load the different mods classes
-        self.ModKlasses = [ModSpeed, ModShield, ModWeapon]
+        self.ModKlasses = [ModSpeed, ModShield, ModHull, ModWeapon]
     
     def create_ship(self, ship_type, mods=[]):
         "Create a new ship of type ship_type with its mods"
