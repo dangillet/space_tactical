@@ -314,8 +314,6 @@ class Ship(cocos.sprite.Sprite):
                         for slot_type, max_count in slots.iteritems() }
         
         self.weapon_idx = 0
-        
-        self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
 
@@ -362,7 +360,6 @@ Weapon:
         return False
         
     def reset_turn(self):
-        self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
         for weapon in self.slots['weapon'].mods:
@@ -426,22 +423,10 @@ class Player(object):
         "Destroys a ship from the fleet"
         self.fleet.remove(ship)
     
-    def turn_completed(self):
-        """Test if all ships have played"""
-        for ship in self.fleet:
-            if not ship.turn_completed:
-                return False
-        return True
-    
     def reset_ships_turn(self):
-        """Reset the ships turn_completed"""
+        """Reset the ships move and attack completed"""
         for ship in self.fleet:
             ship.reset_turn()
-    
-    def end_round(self):
-        """Ends the round of the player"""
-        for ship in self.fleet:
-            ship.turn_completed = True
     
     @staticmethod
     def load():

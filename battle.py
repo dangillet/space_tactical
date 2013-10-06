@@ -242,22 +242,15 @@ class StaticGamePhase(GamePhase):
     
     def on_end_of_round(self):
         player = self.battle.current_player
-        ships_in_play = [ship for ship in player.fleet if not ship.turn_completed]
-        for ship in ships_in_play:
-            ship.turn_completed = True
-        self.battle_grid.clear_ships_highlight(ships_in_play)
-        self.check_end_of_round()
-        
-    def check_end_of_round(self):
-        "Check at the end of a turn if all ships have played. If so, change player."
-        if self.battle.current_player.turn_completed():
-            self.battle.current_player = next(self.battle.players_turn)
-            # If there are no more ships in the fleet, it's game over.
-            if not self.battle.current_player.fleet:
-                game_over_scene = cocos.scene.Scene(game_over.GameOver())
-                director.replace(FadeBLTransition(game_over_scene, duration = 2))
-            self.battle.current_player.reset_ships_turn()
-            self.battle_grid.highlight_player(self.battle.current_player)
+        self.battle_grid.clear_ships_highlight(player.fleet)
+        self.battle.current_player = next(self.battle.players_turn)
+        # If there are no more ships in the fleet, it's game over.
+        if not self.battle.current_player.fleet:
+            game_over_scene = cocos.scene.Scene(game_over.GameOver())
+            director.replace(FadeBLTransition(game_over_scene, duration = 2))
+        self.battle.current_player.reset_ships_turn()
+        self.battle_grid.highlight_player(self.battle.current_player)
+            
 
 class Idle(StaticGamePhase):
     def __init__(self, battle):
