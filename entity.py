@@ -149,7 +149,6 @@ class BoostWeaponDamage(Mod):
     
     def use(self):
         self.used = True
-        self.weapon_idx = self.ship.weapon_idx
         damage = self.ship.weapon.damage
         damage.min += 5
         damage.max += 5
@@ -157,7 +156,7 @@ class BoostWeaponDamage(Mod):
     
     def reverse(self):
         self.used = False
-        damage = self.ship.weapons[self.weapon_idx].damage
+        damage = self.ship.weapon.damage
         damage.min -= 5
         damage.max -= 5
 
@@ -308,7 +307,7 @@ Weapon:
         self.turn_completed = False
         self.move_completed = False
         self.attack_completed = False
-        for weapon in self.weapons:
+        for weapon in self.slots['weapon'].mods:
             weapon.reset_turn()
         if self.boost_used:
             [boost.reverse() for boost in self.boosts if boost.used]
