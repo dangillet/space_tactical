@@ -1,4 +1,4 @@
-import random, json, fractions
+import random, json, fractions, abc
 
 import cocos
 
@@ -37,14 +37,21 @@ class EnergyType(object):
         return _(cls.names[index])
 
 class Mod(object):
+    __metaclass__ = abc.ABCMeta
     def __init__(self, ship=None):
         self.ship = ship
     
+    @abc.abstractmethod
     def use(self):
-        raise NotImplementedError
+        return
 
+    @abc.abstractmethod
     def reverse(self):
-        raise NotImplementedError
+        return
+    
+    @abc.abstractproperty
+    def name(self):
+        return ''
 
 class Slot(event.EventDispatcher):
     def __init__(self, ship, slot_type, max_count):
@@ -75,13 +82,15 @@ class Slot(event.EventDispatcher):
 Slot.register_event_type("on_change")
 
 class ModSpeed(Mod):
-    name = _("Speed")
     def __init__(self, level, sf):
         "sf: ShipFactory"
         super(ModSpeed, self).__init__()
         self.level = level
         self.type = "mobility"
-        self.name += " +%i" % (self.level)
+    
+    @property
+    def name(self):
+        return " ".join( (_("Speed"), "+%i" % (self.level)) )
     
     def use(self):
         self.ship.speed += self.level
@@ -90,13 +99,16 @@ class ModSpeed(Mod):
         self.ship.speed -= self.level
 
 class ModWeapon(Mod):
-    name = _("Weapon")
     def __init__(self, level, weapon, sf):
         super(ModWeapon, self).__init__(None)
         self.level = level
         self.weapon = weapon
         self.sf = sf
         self.type = "attack"
+    
+    @property
+    def name(self):
+        return _("Weapon")
     
     def use(self):
         self.ship.add_weapon(self.sf.create_weapon(self.weapon))
@@ -105,14 +117,17 @@ class ModWeapon(Mod):
         pass
 
 class ModShield(Mod):
-    name = _("Shield")
     def __init__(self, level, energy_type, pr, sf):
         super(ModShield, self).__init__()
         self.level = level
         self.energy_type = EnergyType.names.index(energy_type)
         self.pr = pr
         self.type = "defense"
-        self.name += " %i/%s" %(self.pr, EnergyType.name(self.energy_type))
+        
+    @property
+    def name(self):
+        return " ".join( (_("Shield"),
+                "%i/%s" %(self.pr, EnergyType.name(self.energy_type))) )
     
     def use(self):
         if self.energy_type in self.ship.shield:
@@ -126,36 +141,57 @@ class ModShield(Mod):
         else:
             self.ship.shield[self.energy_type] -= self.pr
 
-class BoostSpeed(Mod):
+class Boost(Mod):
+    __metaclass__ = abc.ABCMeta
     def __init__(self, ship):
-        super(BoostSpeed, self).__init__(ship)
+        super(Boost, self).__init__(ship)
         self.used = False
-        self.name = _("Boost Speed")
     
     def use(self):
         self.used = True
+    
+    def reverse(self):
+        self.used = False
+    
+    @abc.abstractproperty
+    def name(self):
+        return ''
+    
+
+class BoostSpeed(Boost):
+    def __init__(self, ship):
+        super(BoostSpeed, self).__init__(ship)
+    
+    @property
+    def name(self):
+        return _("Boost Speed")
+    
+    def use(self):
+        super(BoostSpeed, self).use()
         self.ship.speed += 2
         self.ship.dispatch_event("on_speed_change")
     
     def reverse(self):
-        self.used = False
+        super(BoostSpeed, self).reverse()
         self.ship.speed -= 2
 
-class BoostWeaponDamage(Mod):
+class BoostWeaponDamage(Boost):
     def __init__(self, ship):
         super(BoostWeaponDamage, self).__init__(ship)
-        self.used = False
-        self.name = _("Boost Weapon")
     
+    @property
+    def name(self):
+        return _("Boost Weapon")
+        
     def use(self):
-        self.used = True
+        super(BoostWeaponDamage, self).use()
         damage = self.ship.weapon.damage
         damage.min += 5
         damage.max += 5
         self.ship.dispatch_event("on_change")
     
     def reverse(self):
-        self.used = False
+        super(BoostWeaponDamage, self).reverse()
         damage = self.ship.weapon.damage
         damage.min -= 5
         damage.max -= 5
@@ -163,21 +199,21 @@ class BoostWeaponDamage(Mod):
 class BoostShield(Mod):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
-        self.used = False
-        self.name = _("Boost Shield")
+    
+    @property
+    def name(self):
+        return _("Boost Shield")
     
     def use(self):
-        self.used = True
+        super(BoostShield, self).use()
         for energy_type in self.ship.shield.iterkeys():
             self.ship.shield[energy_type] += 5
         self.ship.dispatch_event("on_change")
-        self.used = True
     
     def reverse(self):
-        self.used = False
+        super(BoostShield, self).reverse()
         for energy_type in self.ship.shield.iterkeys():
             self.ship.shield[energy_type] -= 5
-        self.used = False
 
 class Weapon(Mod):
     """
@@ -188,7 +224,7 @@ class Weapon(Mod):
         "dmg is a list with min and max values."
         super(Weapon, self).__init__()
         self.type = "weapon"
-        self.name = weapon_type
+        self._name = weapon_type
         self.range = weapon_range
         self.precision = precision
         self.heating = float(100 / rof)
@@ -197,6 +233,10 @@ class Weapon(Mod):
         self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
         self.is_inop = False
+    
+    @property
+    def name(self):
+        return self._name
     
     def use(self):
         pass
