@@ -1,8 +1,10 @@
 import random, json, fractions, abc
 
 import cocos
+from cocos.text import *
 
 from pyglet import event
+from pyglet.gl import *
 import pyglet.text as text
 
 import main
@@ -288,13 +290,10 @@ class BoostShield(Mod):
         for energy_type in self.ship.shield.iterkeys():
             self.ship.shield[energy_type] -= 5
 
-
 class Ship(cocos.sprite.Sprite):
-    def __init__( self, image, ship_type, slots, speed, hull,
-                shield):
+    def __init__( self, image, ship_type, slots, speed, hull, shield):
         """
             Initialize the Ship
-            player: Player
             The player controlling this ship
             sprite: cocos.sprite.Sprite
             The sprite representing this ship
@@ -316,6 +315,31 @@ class Ship(cocos.sprite.Sprite):
         self.weapon_idx = 0
         self.move_completed = False
         self.attack_completed = False
+        
+        self.label = Label("pr",
+                                font_name = "Classic Robot",
+                                font_size = 14,
+                                color = (0, 200, 0, 255),
+                                anchor_y = "center",
+                                anchor_x = "center",
+                                x = 20,
+                                y = -20)
+    
+    def draw(self):
+        #if self.ship_type == "Destroyer":
+            #self._texture.blit(150, 150)
+        
+        glPushMatrix()
+        glTranslatef( self.position[0], self.position[1], 0 )
+        glTranslatef( self.transform_anchor_x, self.transform_anchor_y, 0 )
+        if self.transform_anchor != (0,0):
+            glTranslatef(
+                - self.transform_anchor_x,
+                - self.transform_anchor_y,
+                0 )
+        #self.label.draw()
+        glPopMatrix()
+        super(Ship, self).draw()
 
     @property
     def weapon(self):
