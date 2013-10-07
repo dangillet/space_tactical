@@ -32,6 +32,7 @@ def main():
     load_resource()
     ship_mod = ship_mods.ShipMod()
     main_scene = cocos.scene.Scene(ship_mod)
+
     
     director.run(main_scene)
 

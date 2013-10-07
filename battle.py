@@ -51,6 +51,7 @@ class Battle(cocos.layer.Layer):
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
         self.game_phase = [Idle(self)]
+        self.current_player.reset_ships_turn()
         self.battle_grid.highlight_player(self.current_player)
         
         # Selected object from the grid and list of targets in range
@@ -243,6 +244,7 @@ class StaticGamePhase(GamePhase):
     def on_end_of_round(self):
         player = self.battle.current_player
         self.battle_grid.clear_ships_highlight(player.fleet)
+        player.on_end_of_turn()
         self.battle.current_player = next(self.battle.players_turn)
         # If there are no more ships in the fleet, it's game over.
         if not self.battle.current_player.fleet:

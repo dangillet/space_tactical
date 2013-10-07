@@ -5,7 +5,6 @@ from cocos.text import *
 
 from pyglet import event
 from pyglet.gl import *
-import pyglet.text as text
 
 import main
 
@@ -313,22 +312,20 @@ class Ship(cocos.sprite.Sprite):
                         for slot_type, max_count in slots.iteritems() }
         
         self.weapon_idx = 0
-        self.move_completed = False
-        self.attack_completed = False
+        self._move_completed = False
+        self._attack_completed = False
         
-        self.label = Label("pr",
-                                font_name = "Classic Robot",
-                                font_size = 14,
-                                color = (0, 200, 0, 255),
-                                anchor_y = "center",
-                                anchor_x = "center",
-                                x = 20,
-                                y = -20)
+        self.label = Label('',
+                            font_name = "Classic Robot",
+                            font_size = 10,
+                            color = (0, 200, 0, 255),
+                            anchor_y = "center",
+                            anchor_x = "center",
+                            x = 20,
+                            y = -20)
     
     def draw(self):
-        #if self.ship_type == "Destroyer":
-            #self._texture.blit(150, 150)
-        
+        super(Ship, self).draw()
         glPushMatrix()
         glTranslatef( self.position[0], self.position[1], 0 )
         glTranslatef( self.transform_anchor_x, self.transform_anchor_y, 0 )
@@ -337,10 +334,30 @@ class Ship(cocos.sprite.Sprite):
                 - self.transform_anchor_x,
                 - self.transform_anchor_y,
                 0 )
-        #self.label.draw()
+        
+        self.label.draw()
         glPopMatrix()
-        super(Ship, self).draw()
-
+        
+    @property
+    def move_completed(self):
+        return self._move_completed
+    
+    @move_completed.setter
+    def move_completed(self, value):
+        if value is True:
+            self.label.element.text = self.label.element.text.replace('M','')
+        self._move_completed = value
+    
+    @property
+    def attack_completed(self):
+        return self._attack_completed
+    
+    @attack_completed.setter
+    def attack_completed(self, value):
+        if value is True:
+            self.label.element.text = self.label.element.text.replace('A','')
+        self._attack_completed = value
+    
     @property
     def weapon(self):
         if self.weapon_idx is not None:
@@ -386,6 +403,7 @@ Weapon:
     def reset_turn(self):
         self.move_completed = False
         self.attack_completed = False
+        self.label.element.text = 'MA'
         for weapon in self.slots['weapon'].mods:
             weapon.reset_turn()
         if self.boost_used:
@@ -451,6 +469,11 @@ class Player(object):
         """Reset the ships move and attack completed"""
         for ship in self.fleet:
             ship.reset_turn()
+    
+    def on_end_of_turn(self):
+        "Any logic happening when the turns end."
+        for ship in self.fleet:
+            ship.label.element.text = ''
     
     @staticmethod
     def load():
