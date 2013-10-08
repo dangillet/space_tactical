@@ -90,11 +90,11 @@ class ModWeapon(Mod):
         pass
 
 class ModShield(Mod):
-    def __init__(self, level, energy_type, pr, sf):
+    def __init__(self, level, energy_type, sf):
         super(ModShield, self).__init__()
         self.level = level
         self.energy_type = EnergyType.names.index(energy_type)
-        self.pr = pr
+        self.pr = level * 2
         self.type = "defense"
         
     @property

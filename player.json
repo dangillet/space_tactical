@@ -7,7 +7,7 @@
             "mods": 
             [
                 ["ModSpeed", 1],
-                ["ModShield", 1, "URANIUM", 2],
+                ["ModShield", 1, "URANIUM"],
                 "Laser 1"
             ],
             "count": 3
@@ -23,7 +23,7 @@
     "inventory":
     [
         ["ModSpeed", 1],
-        ["ModShield", 1, "URANIUM", 2],
+        ["ModShield", 1, "URANIUM"],
         ["ModHull", 2]
     ]
 }
