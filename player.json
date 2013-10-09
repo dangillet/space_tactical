@@ -24,6 +24,7 @@
     [
         ["ModSpeed", 1],
         ["ModShield", 1, "URANIUM"],
-        ["ModHull", 2]
+        ["ModHull", 2],
+        ["ModWeapon", 1]
     ]
 }

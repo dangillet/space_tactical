@@ -150,6 +150,7 @@ class ShipInfoLayer(InfoLayer):
         super(ShipInfoLayer, self).__init__(position, width, height)
         self.show_all_weapons = show_all_weapons
         
+        
     def display_model(self):
         "Display the ship and its weapons in the formatted text style"
         model = self.model
@@ -224,7 +225,6 @@ class SubMenu(Menu):
         elif self.menu_valign == BOTTOM:
             self.title_label.y = (0 + fo_height * (len(self.children)) +
                          self.title_height + self.menu_vmargin)
-        
 
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, ship, width, height):

@@ -95,14 +95,28 @@ class ShipMod(cocos.layer.Layer):
         self.add(slot_menu, name="slot_menu_wea")
     
     def on_mod_selected(self, mod):
+        if not self.selected:
+            return
         ship_list = self.get("ship_list")
-        if self.selected.add_mod(mod):
+        slot_weapon = self.get("slot_menu_wea")
+        selected_weapon = slot_weapon.children[ slot_weapon.selected_index][1].callback_args[0]
+        if mod.type in self.selected.slots and \
+                self.selected.add_mod(mod):
+            self.inventory.remove(mod)
+            self.get("mod_list").on_change()
+        elif mod.type in selected_weapon.slots and \
+                selected_weapon.add_mod(mod):
             self.inventory.remove(mod)
             self.get("mod_list").on_change()
     
     def on_mod_deselected(self, mod):
         ship_list = self.get("ship_list")
-        if self.selected.remove_mod(mod):
+        slot_weapon = self.get("slot_menu_wea")
+        selected_weapon = slot_weapon.children[ slot_weapon.selected_index-1][1].callback_args[0]
+        if mod.type in self.selected.slots and \
+                self.selected.remove_mod(mod) or \
+                mod.type in selected_weapon.slots and \
+                selected_weapon.remove_mod(mod):
             self.inventory.append(mod)
             self.get("mod_list").on_change()
         
@@ -110,9 +124,7 @@ class ShipMod(cocos.layer.Layer):
 class SlotMenu(gui.SubMenu):
     def __init__(self, slot, hmargin):
         self.slot = slot
-        title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
-                                                self.slot.max_count)
-        super(SlotMenu, self).__init__(title)
+        super(SlotMenu, self).__init__()
         w, h = director.get_window_size()
         set_fonts(self)
         self.font_title['font_size'] = 20
@@ -122,18 +134,30 @@ class SlotMenu(gui.SubMenu):
         self.menu_hmargin = hmargin
         self.menu_vmargin = 400
         
-
     def on_enter(self):
         super(SlotMenu, self).on_enter()
-        self.slot.ship.push_handlers(self)
-        l = [MenuItem(mod.name, self.parent.on_mod_deselected, mod) for mod in self.slot.mods]
+        self.slot.parent.push_handlers(self)
+        self._create_menu_items()
+    
+    def _create_menu_items(self):
+        l = []
+        self._append_mod_menu_item(l, self.slot) 
         if not l:
             l = [MenuItem("None", None)]
+        self.title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
+                                                self.slot.max_count)
         self.create_menu(l)
-        
+    
+    def _append_mod_menu_item(self, l, slot):
+        for mod in slot.mods:
+            l.append(MenuItem(mod.name, self.parent.on_mod_deselected, mod))
+            if hasattr(mod, "slots"):
+                for slot in mod.slots.itervalues():
+                    self._append_mod_menu_item(l, slot)
+    
     def on_exit(self):
         super(SlotMenu, self).on_exit()
-        self.slot.ship.pop_handlers()
+        self.slot.parent.pop_handlers()
         map(self.remove, (child for z,child in self.children) )
         
     def on_key_press(self, s, m):
@@ -141,12 +165,7 @@ class SlotMenu(gui.SubMenu):
     
     def on_change(self):
         map(self.remove, (child for z,child in self.children) )
-        l = [MenuItem(mod.name, self.parent.on_mod_deselected, mod) for mod in self.slot.mods]
-        if not l:
-            l = [MenuItem("None", None)]
-        self.title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
-                                                self.slot.max_count)
-        self.create_menu(l)
+        self._create_menu_items()
 
 class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
     def __init__(self):
