@@ -174,7 +174,7 @@ class ShipInfoLayer(InfoLayer):
 {{.tab_stops [150]}}
 Energy type: {energy_name}{{#x09}}Range: {w.range}{{}}
 Precision: {w.precision:.0%}{{#x09}}Damage: {w.damage} {{}}
-Temperature: {color_heating}{w.temperature}{color_normal}{{#x09}}Heating: {w.heating:.0f} {{}}
+Temperature: {color_heating}{w.temperature:.0f}{color_normal}{{#x09}}Heating: {w.heating:.0f} {{}}
 Reliability: {w.reliability:.0%}{{}}
 """).format(w=weapon, energy_name=entity.EnergyType.name(weapon.energy_type),
         color_heating="{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",

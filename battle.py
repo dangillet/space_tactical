@@ -1,6 +1,6 @@
 import random, gc
 from itertools import cycle
-import json
+import json, collections
 
 import cocos
 from cocos.actions import CallFunc, CallFuncS
@@ -51,7 +51,7 @@ class Battle(cocos.layer.Layer):
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
         self.on_new_turn()
-        self.game_phase = [Idle(self)]
+        self.game_phase = collections.deque([Idle(self)])
         self.change_game_phase(Idle(self))
         self.current_player.reset_ships_turn()
         self.battle_grid.highlight_player(self.current_player)
@@ -328,8 +328,8 @@ class ShipSelected(StaticGamePhase):
             elif self.battle.targets is not None and entity in self.battle.targets:
                 weapon = self.selected.weapon
                 if weapon.temperature >= 100.:
-                    msg = PROMPT + _("""{font_name 'Classic Robot'}
-{font_size 10}{color [255, 0, 0, 255]}Overheating, {weapon.name} needs some time before next use.
+                    msg = PROMPT + _("""{{font_name 'Classic Robot'}}
+{{font_size 10}}{{color [255, 0, 0, 255]}}Overheating, {weapon.name} needs some time before next use.
 """) .format(weapon=weapon)
                     self.battle.log_info.prepend_text(msg)
                 else:
