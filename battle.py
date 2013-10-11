@@ -193,7 +193,7 @@ class Battle(cocos.layer.Layer):
             self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
-        self.msg += _("Major Failure ! You will need a tech to use %s again.{}\n") % (weapon.name)
+        self.msg += _("Major Failure ! You will need a tech to use {weapon.name} again.{{}}\n").format(weapon=weapon)
     
     def on_damage(self, ship, dmg):
         if dmg > 0:
@@ -205,8 +205,8 @@ Yeahhh! {}\n""")
             self.msg += _("""This ship is invulnerable, we should avoid the showdown.
 Our weapon is badly... ineffective, Commander {}\n""")
     
-    def on_destroyed(self, ship):
-        self.msg += _("Yeahhh! And one more %energy%'s spoon for daddy!{}\n")
+    def on_destroyed(self, ship, energy_name):
+        self.msg += _("Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}\n").format(energy_name=energy_name)
         self.battle_grid.remove(ship)
             
     def on_missed(self):
@@ -214,7 +214,7 @@ Our weapon is badly... ineffective, Commander {}\n""")
 Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
     
     def on_new_turn(self):
-        self.msg += _("%s's turn begins... {}\n") % (self.current_player.name)
+        self.msg += _("{player.name}'s turn begins... {{}}\n").format(player=self.current_player)
     
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
@@ -329,8 +329,8 @@ class ShipSelected(StaticGamePhase):
                 weapon = self.selected.weapon
                 if weapon.temperature >= 100.:
                     msg = PROMPT + _("""{font_name 'Classic Robot'}
-{font_size 10}{color [255, 0, 0, 255]}Overheating, %s needs some time before next use.
-""") % (weapon.name)
+{font_size 10}{color [255, 0, 0, 255]}Overheating, {weapon.name} needs some time before next use.
+""") .format(weapon=weapon)
                     self.battle.log_info.prepend_text(msg)
                 else:
                     self.battle.push_game_phase(Attack(self.battle, entity))

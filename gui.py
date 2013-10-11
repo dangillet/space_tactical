@@ -154,12 +154,13 @@ class ShipInfoLayer(InfoLayer):
     def display_model(self):
         "Display the ship and its weapons in the formatted text style"
         model = self.model
-        shield = " - ".join(["%d/%s" % (pr, entity.EnergyType.name(en_idx)) 
+        shield = " - ".join(["{pr}/{energy_name}".format(pr=pr,
+                                    energy_name= entity.EnergyType.name(en_idx)) 
                         for en_idx, pr in model.shield.iteritems() if pr != 0])
-        s =  _("""
-{font_name 'Classic Robot'}{font_size 16}{color [255, 0, 0, 255]}{italic True}%s{italic False}{}
-{font_size 12}{.tab_stops [90, 170]}{color [255, 255, 255, 255]}Speed: %d{#x09}Hull: %d{#x09}Shield: %s
-""") % (model.ship_type, model.speed, model.hull, shield)
+        s =  _("""{{font_name 'Classic Robot'}}{{font_size 16}}
+{{color [255, 0, 0, 255]}}{{italic True}}{m.ship_type}{{italic False}}{{}}
+{{font_size 12}}{{.tab_stops [90, 170]}}{{color [255, 255, 255, 255]}}Speed: {m.speed}{{#x09}}Hull: {m.hull}{{#x09}}Shield: {shield}
+""").format(m=model, shield=shield)
         if self.show_all_weapons:
             for weapon in model.slots['weapon'].mods:
                 s += self._display_weapon(weapon)
@@ -169,17 +170,15 @@ class ShipInfoLayer(InfoLayer):
     
     def _display_weapon(self, weapon):
         return _("""
-{color [255, 0, 0, 255]}%s {color [255, 255, 255, 255]} {}
-{.tab_stops [150]}
-Energy type: %s{#x09}Range: %d{}
-Precision: %d%%{#x09}Damage: %r {}
-Temperature: %s%d%s{#x09}Heating: %d {}
-Reliability: %d%%{}
-""") % (weapon.name, entity.EnergyType.name(weapon.energy_type), weapon.range,
-        weapon.precision*100, weapon.damage, 
-        "{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",
-        weapon.temperature, "{color (255, 255, 255, 255)}", weapon.heating,
-        weapon.reliability*100)
+{{color [255, 0, 0, 255]}}{w.name} {{color [255, 255, 255, 255]}} {{}}
+{{.tab_stops [150]}}
+Energy type: {energy_name}{{#x09}}Range: {w.range}{{}}
+Precision: {w.precision:.0%}{{#x09}}Damage: {w.damage} {{}}
+Temperature: {color_heating}{w.temperature}{color_normal}{{#x09}}Heating: {w.heating:.0f} {{}}
+Reliability: {w.reliability:.0%}{{}}
+""").format(w=weapon, energy_name=entity.EnergyType.name(weapon.energy_type),
+        color_heating="{color (255, 0, 0, 255)}" if weapon.temperature >= 100 else "",
+        color_normal="{color (255, 255, 255, 255)}")
         
     def on_change(self):
         self.update()

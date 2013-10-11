@@ -39,6 +39,7 @@ class EnergyType(object):
 
 class Mod(object):
     __metaclass__ = abc.ABCMeta
+    slots = {} # Some mods could have mods themselves, like a weapon has mod_weapon
     def __init__(self, parent=None):
         self.parent = parent
     
@@ -184,6 +185,9 @@ class Slot(event.EventDispatcher):
             self.mods.remove(mod)
             mod.reverse()
             mod.parent = None
+    
+    def __contains__(self, mod):
+        return mod in self.mods
 
 Slot.register_event_type("on_change")
 
@@ -428,6 +432,8 @@ Weapon:
         self.dispatch_event("on_weapon_change")
 
     def add_mod(self, mod):
+        if mod.type not in self.slots:
+            return False
         if self.slots[mod.type].add_mod(mod):
             self.dispatch_event("on_change")
             return True
@@ -435,8 +441,10 @@ Weapon:
     
     def remove_mod(self, mod):
         if mod.type not in self.slots:
-            if mod.parent in self.slots['weapon'].mods: # Then this is a mod_weapon
-                return mod.parent.remove_mod(mod)
+            # Check if this mod is attached to one of the current mods
+            for slot in self.slots.itervalues():
+                if mod.parent in slot: # Then this is a mod_weapon
+                    return mod.parent.remove_mod(mod)
             return False
         if self.slots[mod.type].remove_mod(mod):
             self.dispatch_event("on_change")
@@ -481,7 +489,7 @@ Weapon:
         self.hull -= damage
         self.dispatch_event("on_damage", self, damage)
         if self.hull <= 0:
-            self.dispatch_event("on_destroyed", self)
+            self.dispatch_event("on_destroyed", self, EnergyType.name(energy_type))
             self.player.destroy_ship(self)
 
 Ship.register_event_type("on_change")
@@ -529,11 +537,10 @@ class Player(object):
         Add mod to the inventory. If mod has sub-mods, detach them from the mod
         and add them to the inventory.
         """
-        if hasattr(mod, "slots"):
-            for slot in mod.slots.itervalues():
-                for _mod in slot.mods:
-                    slot.remove_mod(_mod)
-                    self.add_mod_to_inventory(_mod)
+        for slot in mod.slots.itervalues():
+            for _mod in slot.mods:
+                slot.remove_mod(_mod)
+                self.add_mod_to_inventory(_mod)
         self.inventory.append(mod)
     
     @staticmethod

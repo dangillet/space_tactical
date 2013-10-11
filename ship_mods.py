@@ -140,17 +140,19 @@ class SlotMenu(gui.SubMenu):
         self._append_mod_menu_item(l, self.slot, 0) 
         if not l:
             l = [MenuItem("None", None)]
-        self.title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
-                                                self.slot.max_count)
+        self.title = "{slot.type} ({count}/{slot.max_count})".format(slot=self.slot,
+                        count=len(self.slot.mods) )
         self.create_menu(l)
     
     def _append_mod_menu_item(self, l, slot, level):
         for mod in slot.mods:
-            l.append(MenuItem("  "*level + mod.name,
-                     self.parent.on_mod_deselected, mod))
-            if hasattr(mod, "slots"):
-                for slot in mod.slots.itervalues():
-                    self._append_mod_menu_item(l, slot, level+1)
+            menu_item = MenuItem("  "*level + mod.name,
+                     self.parent.on_mod_deselected, mod)
+            menu_item.mod = mod
+            l.append(menu_item)
+            # Check for mods of mod.
+            for slot in mod.slots.itervalues():
+                self._append_mod_menu_item(l, slot, level+1)
     
     def on_exit(self):
         super(SlotMenu, self).on_exit()
@@ -182,20 +184,22 @@ class SlotMenu(gui.SubMenu):
     def selected_mod(self):
         "Returns the selected mod in this slot."
         # If list is empty, there is only one child which is a MenuItem("None", None)
-        if self.children[ self.selected_index][1].callback_func is None:
+        if self.children[self.selected_index][1].callback_func is None:
             return None
-        # ItemMenu contains a callback passing the mod as first argument.
-        return self.children[ self.selected_index][1].callback_args[0]
+        # ItemMenu represents a mod contained in its mod attribute.
+        return self.children[self.selected_index][1].mod
     
     @property
     def mod_at_index(self, idx):
         "Returns the mod at the given index"
-        return self.children[idx][1].callback_args[0]
+        return self.children[idx][1].mod
     
     def index_of_mod(self, mod):
         "Finds the index of the MenuItem displaying this mod."
+        # If selected item is MenuItem("None", None), return 0
+        if self.selected_mod is None: return 0
         for idx, (z, child) in enumerate(self.children):
-            if child.callback_args[0] is mod:
+            if child.mod is mod:
                 return idx
         return 0
     
