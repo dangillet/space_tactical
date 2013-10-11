@@ -18,7 +18,7 @@ INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
 MENU_BUTTON_HEIGHT = 50
 MARGIN = 10
-PROMPT = "{color [255,255,255,255]}>> {margin_left 25}"
+PROMPT = "{font_name 'Classic Robot'}{font_size 10}{color [255,255,255,255]}>> {margin_left 25}"
 
 class ViewPort(object):
     position = (0, 0)
@@ -50,9 +50,12 @@ class Battle(cocos.layer.Layer):
             self.battle_grid.add_player_fleet(player, i)
         # Select the first player from the list as the current one
         self.current_player = next(self.players_turn)
+        self.on_new_turn()
         self.game_phase = [Idle(self)]
+        self.change_game_phase(Idle(self))
         self.current_player.reset_ships_turn()
         self.battle_grid.highlight_player(self.current_player)
+
         
         # Selected object from the grid and list of targets in range
         self.selected, self.targets = None, None
@@ -171,12 +174,12 @@ class Battle(cocos.layer.Layer):
         ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
         m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
-        self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
-{bold True}ATTACK{bold False} {}
-{color [0, 255, 0, 255]}%s
-{color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
-ship.{}
-""") % (attacker.player.name, defender.player.name)
+        #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
+#{bold True}ATTACK{bold False} {}
+#{color [0, 255, 0, 255]}%s
+#{color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
+#ship.{}
+#""") % (attacker.player.name, defender.player.name)
         
         attacker.attack(defender)
     
@@ -190,17 +193,28 @@ ship.{}
             self.show_reachable_cells()
     
     def on_weapon_jammed(self, weapon):
-        self.msg += _("%s jammed! It's now inoperative.{}\n") % (weapon.name)
+        self.msg += _("Major Failure ! You will need a tech to use %s again.{}\n") % (weapon.name)
     
     def on_damage(self, ship, dmg):
-        self.msg += _("HIT! %s took %d points of damage. {}\n") % (ship.ship_type, dmg)
+        if dmg > 0:
+            self.msg += _("""Nice shot, those bastards will soon meet the vacuum of space!
+We hardly stroke our ennemy, Commander.
+Well done,boys! Let's keep that fire rate.  
+Yeahhh! {}\n""")
+        else:
+            self.msg += _("""This ship is invulnerable, we should avoid the showdown.
+Our weapon is badly... ineffective, Commander {}\n""")
     
     def on_destroyed(self, ship):
-        self.msg += _("%s is destroyed.{}\n") %(ship.ship_type)
+        self.msg += _("Yeahhh! And one more %energy%'s spoon for daddy!{}\n")
         self.battle_grid.remove(ship)
             
     def on_missed(self):
-        self.msg += _("Missed!{}\n")
+        self.msg += _("""Commander, our offensive totally missed.
+Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
+    
+    def on_new_turn(self):
+        self.msg += _("%s's turn begins... {}\n") % (self.current_player.name)
     
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
@@ -251,7 +265,9 @@ class StaticGamePhase(GamePhase):
             game_over_scene = cocos.scene.Scene(game_over.GameOver())
             director.replace(FadeBLTransition(game_over_scene, duration = 2))
         self.battle.current_player.reset_ships_turn()
+        self.battle.on_new_turn()
         self.battle_grid.highlight_player(self.battle.current_player)
+        self.battle.change_game_phase(Idle(self.battle))
             
 
 class Idle(StaticGamePhase):
@@ -313,7 +329,7 @@ class ShipSelected(StaticGamePhase):
                 weapon = self.selected.weapon
                 if weapon.temperature >= 100.:
                     msg = PROMPT + _("""{font_name 'Classic Robot'}
-{font_size 10}{color [255, 0, 0, 255]}Cannot fire with %s. It's overheating.
+{font_size 10}{color [255, 0, 0, 255]}Overheating, %s needs some time before next use.
 """) % (weapon.name)
                     self.battle.log_info.prepend_text(msg)
                 else:

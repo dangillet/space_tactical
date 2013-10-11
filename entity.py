@@ -288,12 +288,12 @@ class BoostSpeed(Boost):
     
     def use(self):
         super(BoostSpeed, self).use()
-        self.ship.speed += 2
-        self.ship.dispatch_event("on_speed_change")
+        self.parent.speed += 2
+        self.parent.dispatch_event("on_speed_change")
     
     def reverse(self):
         super(BoostSpeed, self).reverse()
-        self.ship.speed -= 2
+        self.parent.speed -= 2
 
 class BoostWeaponDamage(Boost):
     def __init__(self, ship):
@@ -305,18 +305,18 @@ class BoostWeaponDamage(Boost):
         
     def use(self):
         super(BoostWeaponDamage, self).use()
-        damage = self.ship.weapon.damage
+        damage = self.parent.weapon.damage
         damage.min += 5
         damage.max += 5
-        self.ship.dispatch_event("on_change")
+        self.parent.dispatch_event("on_change")
     
     def reverse(self):
         super(BoostWeaponDamage, self).reverse()
-        damage = self.ship.weapon.damage
+        damage = self.parent.weapon.damage
         damage.min -= 5
         damage.max -= 5
 
-class BoostShield(Mod):
+class BoostShield(Boost):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
     
@@ -326,14 +326,14 @@ class BoostShield(Mod):
     
     def use(self):
         super(BoostShield, self).use()
-        for energy_type in self.ship.shield.iterkeys():
-            self.ship.shield[energy_type] += 5
-        self.ship.dispatch_event("on_change")
+        for energy_type in self.parent.shield.iterkeys():
+            self.parent.shield[energy_type] += 5
+        self.parent.dispatch_event("on_change")
     
     def reverse(self):
         super(BoostShield, self).reverse()
-        for energy_type in self.ship.shield.iterkeys():
-            self.ship.shield[energy_type] -= 5
+        for energy_type in self.parent.shield.iterkeys():
+            self.parent.shield[energy_type] -= 5
 
 class Ship(cocos.sprite.Sprite):
     def __init__( self, image, ship_type, slots, speed, hull, shield):
