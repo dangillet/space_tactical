@@ -8,7 +8,7 @@
             [
                 ["ModSpeed", 1],
                 ["ModShield", 1, "URANIUM"],
-                "Laser 1"
+                ["Laser 1"]
             ],
             "count": 3
         },
@@ -25,6 +25,7 @@
         ["ModSpeed", 1],
         ["ModShield", 1, "URANIUM"],
         ["ModHull", 2],
+        ["ModWeapon", 1],
         ["ModWeapon", 1]
     ]
 }

@@ -32,7 +32,7 @@
     },
     {
       "weapon_type": "SunBeam 1",
-      "slots": {"mod_weapon":1},
+      "slots": {"mod_weapon":2},
       "range": 5,
       "precision": 0.8,
       "rate of fire": "1/1",
@@ -52,7 +52,7 @@
       "shield": [
               {"pr":10, "energy_type":"SONIC"}
           ],
-      "weapons": ["Laser 1"]
+      "weapons": [ ["Laser 1"] ]
     },
     
     {
@@ -64,7 +64,7 @@
       "shield": [
               {"pr":20, "energy_type":"PLASMA"}
           ],
-      "weapons": ["Laser 1", "Laser 3"]
+      "weapons": [ ["Laser 1"], ["Laser 3"] ]
     },
 
     {
@@ -77,7 +77,7 @@
               {"pr":20, "energy_type":"URANIUM"},
               {"pr":10, "energy_type":"PLASMA"}
           ],
-      "weapons": ["SunBeam 1", "Laser 3"]
+      "weapons": [ ["SunBeam 1"] , ["Laser 3"] ]
     }
   ]
 }

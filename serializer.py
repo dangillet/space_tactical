@@ -7,17 +7,23 @@ class SpaceEncoder(json.JSONEncoder):
             return {'name':o.name, 'fleet':o.fleet, 'inventory':o.inventory}
         elif isinstance(o, entity.Ship):
             mods = []
-            for slot_type, slot in o.slots.iteritems():
+            for slot in o.slots.itervalues():
                 mods.extend(self.default(slot) )
             return {'type':o.ship_type, 'mods':mods}
         elif isinstance(o, entity.Slot):
             return o.mods
         elif isinstance(o, entity.Weapon):
-            return o.name
+            mods = [o.name]
+            for slot in o.slots.itervalues():
+                mods.extend(self.default(slot) )
+            return mods
         elif isinstance(o, entity.ModSpeed):
             return ['ModSpeed', o.level]
         elif isinstance(o, entity.ModShield):
-            return ['ModShield', o.level, entity.EnergyType.names[o.energy_type], o.pr]
-        
+            return ['ModShield', o.level, entity.EnergyType.names[o.energy_type]]
+        elif isinstance(o, entity.ModHull):
+            return ['ModHull', o.level]
+        elif isinstance(o, entity.ModWeapon):
+            return ['ModWeapon', o.level]
         else:
             return super(SpaceEncoder, self).default(o)

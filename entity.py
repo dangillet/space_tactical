@@ -1,4 +1,4 @@
-import random, json, fractions, abc
+import random, json, fractions, abc, collections
 
 import cocos
 from cocos.text import *
@@ -167,14 +167,23 @@ class Slot(event.EventDispatcher):
         return True
     
     def remove_mod(self, mod):
+        # Ships should have at least one weapon with reliability 100%
         if mod.type == "weapon" and not [weapon for weapon in self.mods if 
                 (weapon != mod and weapon.reliability == 1.0)]:
+            return False
+        if mod not in self.mods:
             return False
         self.mods.remove(mod)
         mod.reverse()
         mod.parent = None
         self.dispatch_event("on_change")
         return True
+    
+    def remove_all_mods(self):
+        for mod in self.mods:
+            self.mods.remove(mod)
+            mod.reverse()
+            mod.parent = None
 
 Slot.register_event_type("on_change")
 
@@ -240,11 +249,14 @@ Reliability: %d%%
     
     def add_mod(self, mod):
         if self.slots[mod.type].add_mod(mod):
-            self.parent.dispatch_event("on_change")
+            if self.parent is not None:
+                self.parent.dispatch_event("on_change")
             return True
         return False
     
     def remove_mod(self, mod):
+        if mod.type not in self.slots:
+            return False
         if self.slots[mod.type].remove_mod(mod):
             self.parent.dispatch_event("on_change")
             return True
@@ -422,6 +434,10 @@ Weapon:
         return False
     
     def remove_mod(self, mod):
+        if mod.type not in self.slots:
+            if mod.parent in self.slots['weapon'].mods: # Then this is a mod_weapon
+                return mod.parent.remove_mod(mod)
+            return False
         if self.slots[mod.type].remove_mod(mod):
             self.dispatch_event("on_change")
             return True
@@ -507,6 +523,18 @@ class Player(object):
         "Any logic happening when the turns end."
         for ship in self.fleet:
             ship.label.element.text = ''
+    
+    def add_mod_to_inventory(self, mod):
+        """
+        Add mod to the inventory. If mod has sub-mods, detach them from the mod
+        and add them to the inventory.
+        """
+        if hasattr(mod, "slots"):
+            for slot in mod.slots.itervalues():
+                for _mod in slot.mods:
+                    slot.remove_mod(_mod)
+                    self.add_mod_to_inventory(_mod)
+        self.inventory.append(mod)
     
     @staticmethod
     def load():
@@ -596,16 +624,19 @@ class ShipFactory(object):
     
     def create_mod(self, mod):
         "Creates a mod which could be a weapon"
-        if isinstance(mod, basestring) and mod in self.weapons:
-            weapon = self.create_weapon(mod)
+        mod = collections.deque(mod) #Need a copy as we alter the list
+        mod_name = mod.popleft()
+        for ModKlass in self.ModKlasses:
+            if ModKlass.__name__ == mod_name:
+                mod_instance = ModKlass(*mod, sf=self)
+                return mod_instance
+        # Mod name not found in ModKlass, so it should be a weapon
+        if mod_name in self.weapons:
+            weapon = self.create_weapon(mod_name)
+            # The remainder of the list might contain mod_weapons
+            for _mod in mod:
+                weapon.add_mod(self.create_mod(_mod))
             return weapon
-        else:
-            mod = mod[:] #Need a copy as we alter the list
-            mod_name = mod.pop(0)
-            for ModKlass in self.ModKlasses:
-                if ModKlass.__name__ == mod_name:
-                    mod_instance = ModKlass(*mod, sf=self)
-                    return mod_instance
     
     def create_weapon(self, weapon_type):
         weapon_args = self.weapons[weapon_type]

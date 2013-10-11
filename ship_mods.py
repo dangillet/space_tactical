@@ -97,9 +97,12 @@ class ShipMod(cocos.layer.Layer):
     def on_mod_selected(self, mod):
         if not self.selected:
             return
-        ship_list = self.get("ship_list")
         slot_weapon = self.get("slot_menu_wea")
-        selected_weapon = slot_weapon.children[ slot_weapon.selected_index][1].callback_args[0]
+        selected_weapon = slot_weapon.selected_mod
+        i=1
+        while selected_weapon.type != "weapon":
+            selected_weapon = slot_weapon.mod_at_index(slot_weapon.selected_index - i)
+            i += 1
         if mod.type in self.selected.slots and \
                 self.selected.add_mod(mod):
             self.inventory.remove(mod)
@@ -110,16 +113,9 @@ class ShipMod(cocos.layer.Layer):
             self.get("mod_list").on_change()
     
     def on_mod_deselected(self, mod):
-        ship_list = self.get("ship_list")
-        slot_weapon = self.get("slot_menu_wea")
-        selected_weapon = slot_weapon.children[ slot_weapon.selected_index-1][1].callback_args[0]
-        if mod.type in self.selected.slots and \
-                self.selected.remove_mod(mod) or \
-                mod.type in selected_weapon.slots and \
-                selected_weapon.remove_mod(mod):
-            self.inventory.append(mod)
+        if self.selected.remove_mod(mod):
+            self.player.add_mod_to_inventory(mod)
             self.get("mod_list").on_change()
-        
 
 class SlotMenu(gui.SubMenu):
     def __init__(self, slot, hmargin):
@@ -141,19 +137,20 @@ class SlotMenu(gui.SubMenu):
     
     def _create_menu_items(self):
         l = []
-        self._append_mod_menu_item(l, self.slot) 
+        self._append_mod_menu_item(l, self.slot, 0) 
         if not l:
             l = [MenuItem("None", None)]
         self.title = self.slot.type + " (%d/%d)" % (len(self.slot.mods), 
                                                 self.slot.max_count)
         self.create_menu(l)
     
-    def _append_mod_menu_item(self, l, slot):
+    def _append_mod_menu_item(self, l, slot, level):
         for mod in slot.mods:
-            l.append(MenuItem(mod.name, self.parent.on_mod_deselected, mod))
+            l.append(MenuItem("  "*level + mod.name,
+                     self.parent.on_mod_deselected, mod))
             if hasattr(mod, "slots"):
                 for slot in mod.slots.itervalues():
-                    self._append_mod_menu_item(l, slot)
+                    self._append_mod_menu_item(l, slot, level+1)
     
     def on_exit(self):
         super(SlotMenu, self).on_exit()
@@ -164,9 +161,44 @@ class SlotMenu(gui.SubMenu):
         return False
     
     def on_change(self):
+        old_selected_mod = self.selected_mod
         map(self.remove, (child for z,child in self.children) )
         self._create_menu_items()
-
+        if old_selected_mod is not None:
+            new_idx = self.index_of_mod(old_selected_mod)
+            self._select_item(new_idx)
+    
+    def on_mouse_motion( self, x, y, dx, dy ):
+        "Do not select item when hovering over them."
+        pass
+    
+    def on_mouse_release( self, x, y, buttons, modifiers ):
+        "Only select items when clicking them."
+        super(SlotMenu, self).on_mouse_motion(x, y, 0, 0)
+        if buttons == pyglet.window.mouse.LEFT:
+            return super(SlotMenu, self).on_mouse_release(x, y, buttons, modifiers)
+            
+    @property
+    def selected_mod(self):
+        "Returns the selected mod in this slot."
+        # If list is empty, there is only one child which is a MenuItem("None", None)
+        if self.children[ self.selected_index][1].callback_func is None:
+            return None
+        # ItemMenu contains a callback passing the mod as first argument.
+        return self.children[ self.selected_index][1].callback_args[0]
+    
+    @property
+    def mod_at_index(self, idx):
+        "Returns the mod at the given index"
+        return self.children[idx][1].callback_args[0]
+    
+    def index_of_mod(self, mod):
+        "Finds the index of the MenuItem displaying this mod."
+        for idx, (z, child) in enumerate(self.children):
+            if child.callback_args[0] is mod:
+                return idx
+        return 0
+    
 class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
     def __init__(self):
         super(ShipList, self).__init__()
