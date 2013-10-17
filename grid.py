@@ -273,17 +273,22 @@ class GridLayer(cocos.layer.ScrollableLayer):
         i0, j0 = self.from_pixel_to_grid(*(objA.position))
         i1, j1 = self.from_pixel_to_grid(*(objB.position))
         los = library.get_line(i0, j0, i1, j1)
+        other_ships = {pos:ship for pos, ship in self.entities['ships'].iteritems()
+                        if (ship is not objA and ship is not objB)}
         for cell in los:
-            if cell in self.entities['asteroids']:
+            if cell in self.entities['asteroids'] or \
+                cell in self.entities['ships'] and \
+                cell != (i0, j0) and cell != (i1, j1):
                 return False
         return True
         
-    def get_reachable_cells(self, i, j, speed):
+    def get_reachable_cells(self, ship):
         """
         Forward this to the distance matrix. Remove any other ships from
         reachable cells so we can move through ships but not stop on another one.
         """
-        r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, speed)
+        i, j = self.from_pixel_to_grid(*(ship.position))
+        r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, ship.speed)
         r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
         return r_cells, predecessor
     

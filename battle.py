@@ -131,7 +131,7 @@ class Battle(cocos.layer.Layer):
             return True
     
     def select_ship(self):
-        "Make the entity the selecetd ship."
+        "Make the entity the selected ship."
         self.battle_grid.highlight_ships([self.selected], grid.SHIP_SELECTED)
         # If ship didn't move yet, calculate and highlight the reachable cells
         self.show_reachable_cells()
@@ -141,8 +141,7 @@ class Battle(cocos.layer.Layer):
     def show_reachable_cells(self):
         "calculate and highlight the reachable cells"
         if not self.selected.move_completed:
-            i, j = self.battle_grid.from_pixel_to_grid(*(self.selected.position))
-            self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(i, j, self.selected.speed)
+            self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(self.selected)
             self.battle_grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
     
     def show_targets(self):
