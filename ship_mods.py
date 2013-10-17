@@ -235,7 +235,7 @@ class ShipList(gui.SubMenu, pyglet.event.EventDispatcher):
     
     def on_save(self):
         with open("player.json", "w") as fp:
-            json.dump(self.parent.player, fp, cls=serializer.SpaceEncoder, indent=2)
+            json.dump(self.parent.player, fp, cls=serializer.SpaceEncoder, indent=4, sort_keys=True)
         
     def show(self, ship):
         self.parent.ship_info.set_model( ship )
