@@ -368,6 +368,9 @@ class Attack(GamePhase):
     
     def on_enter(self):
         self.battle.attack_ship(self.battle.selected, self.ennemy)
+        if not self.battle.selected.boost_used:
+            # If no boost yet used, disable the Boost Weapon
+            self.battle.get("ship_menu").get("boost_menu").disable(2)
         self.battle.pop_game_phase()
     
     def on_exit(self):
@@ -386,6 +389,9 @@ class Move(GamePhase):
         self.battle.move_ship(self.battle.selected, self.i, self.j)
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
+        if not self.battle.selected.boost_used:
+            # If no boost yet used, disable the Boost Speed
+            self.battle.get("ship_menu").get("boost_menu").disable(1)
         
     def on_move_finished(self):
         self.battle.pop_game_phase()

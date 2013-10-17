@@ -382,6 +382,10 @@ class BoostMenu(ShipMenu):
                     disabled=ship.boost_used)
             l.append(item)
         self.create_menu(l, layout_strategy=horizontalMenuLayout)
+        if ship.move_completed:
+            self.disable(1)
+        if ship.attack_completed:
+            self.disable(2)
     
     def on_boost_use(self):
         for _, item in self.children:

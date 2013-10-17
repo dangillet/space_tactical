@@ -363,10 +363,11 @@ class Ship(cocos.sprite.Sprite):
         self.boosts = [BoostShield(self),
                     BoostSpeed(self),
                     BoostWeaponDamage(self)]
-        self.boost_used = False
         self.slots = { slot_type: Slot(self, slot_type, max_count) 
                         for slot_type, max_count in slots.iteritems() }
         self.weapon_idx = 0
+        
+        self.boost_used = False
         self._move_completed = False
         self._attack_completed = False
         
