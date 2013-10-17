@@ -86,13 +86,8 @@ class ModWeapon(Mod):
         weapon = self.parent
         weapon.damage.min += self.level * 2
         weapon.damage.max += self.level * 2
-        # We want the rof to increase according to this serie
-        # 1/2..2/3..3/4..4/5..5/6..n/n+1
-        # To go from n-1/n to n/n+1 you need to add 1/(n*(n+1))
-        n = weapon.rof.denominator
-        rof_increase = fractions.Fraction(numerator=1, 
-                                denominator=n*(n+1) )
-        weapon.rof += rof_increase
+        weapon.rof += self._rof_delta(weapon.rof)
+        print weapon.rof
         weapon.heating = float(100/weapon.rof)
         weapon.reliability -= 0.02 * self.level
     
@@ -100,12 +95,23 @@ class ModWeapon(Mod):
         weapon = self.parent
         weapon.damage.min -= self.level * 2
         weapon.damage.max -= self.level * 2
-        n = weapon.rof.denominator
-        rof_decrease = fractions.Fraction(numerator=1, 
-                                denominator=n*(n-1) )
-        weapon.rof -= rof_decrease
+        weapon.rof -= self._rof_delta(weapon.rof)
         weapon.heating = float(100/weapon.rof)
         weapon.reliability += 0.02 * self.level
+    
+    def _rof_delta(self, rof):
+        """ 
+        We want the rof to increase according to this serie
+        1/2..2/3..3/4..4/5..5/6..n/n+1
+        To go from n-1/n to n/n+1 you need to add 1/(n*(n+1))
+        And generalizing even more: if we want to go from (n-k)/n to (n-k+1)/(n+1)
+        you need to add k/(n*(n+1)). So for any given fraction x/y, we can find
+        that n = y and k = y-x
+        """
+        n = rof.denominator
+        k = n - rof.numerator
+        return fractions.Fraction(numerator=k, 
+                                denominator=n*(n+1) )
 
 class ModShield(Mod):
     def __init__(self, level, energy_type, sf):
@@ -224,7 +230,7 @@ class Weapon(Mod):
     def reverse(self):
         pass
     
-    def __repr__(self):
+    def __str__(self):
         return """
 %s
 Energy type: %s\tRange: %d
@@ -414,7 +420,7 @@ class Ship(cocos.sprite.Sprite):
         else:
             return None
 
-    def __repr__(self):
+    def __str__(self):
         shield = " - ".join(["%d/%s" % (pr, EnergyType.names[en_idx]) for en_idx, pr in self.shield.iteritems()])
         s = """
 %s
