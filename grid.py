@@ -38,27 +38,27 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Batch for the asteroids
         self.sprite_batch = cocos.batch.BatchNode()
         self.add(self.sprite_batch)
-        
+
         # Size of the grid
         self.col, self.row = map_kwargs['col'], map_kwargs['row']
         # Max size of the showable area.
         self.px_width = (self.col) * CELL_WIDTH
         self.px_height = (self.row) * CELL_WIDTH
-        
+
         # Grid squares and borders
         self.squares = [[None for _ in range(self.row)] for _ in range(self.col)]
         self.borders = []
-        
+
         # Each entity type has a dict {(i, j): entity}
         self.entities = {'asteroids' : {}, 'diff_terrain' : {}, 'ships': {}}
-        
+
         # We build the obstacles and difficult terrains
-        # We get a set of coordinates for each type of terrain. We don't want 
+        # We get a set of coordinates for each type of terrain. We don't want
         # obstacles on the same place as difficult terrains. So we take the difference
         # between both sets to get the terrain.
         diff_terrain_pos = self.generate_noise_terrain(map_kwargs['difficult terrain'])
         asteroids_pos = self.generate_noise_terrain(map_kwargs['obstacle']) - diff_terrain_pos
-        
+
         # Create the asteroids animated sprites
         raw = pyglet.resource.image('aster3.png')
         raw_seq = pyglet.image.ImageGrid(raw, 6, 5)
@@ -67,11 +67,11 @@ class GridLayer(cocos.layer.ScrollableLayer):
         for x, y in asteroids_pos:
             rotation_speed = uniform(0.07, 0.15)
             anim = pyglet.image.Animation.from_image_sequence(texture_seq, rotation_speed, True)
-            asteroid = entity.Asteroid(anim, position=self.from_grid_to_pixel(x,y), 
+            asteroid = entity.Asteroid(anim, position=self.from_grid_to_pixel(x,y),
                                                          rotation = uniform(0, 360))
             self.sprite_batch.add(asteroid)
             self.entities['asteroids'][(x, y)] = asteroid
-            
+
         # Create the difficult terrain sprites
         raw = pyglet.resource.image('nebulaes.png')
         raw_grid = pyglet.image.ImageGrid(raw, 3, 3, row_padding=1, column_padding=1)
@@ -79,17 +79,17 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # max_len = len(texture_grid)
 
         for x, y in diff_terrain_pos:
-            diff_terrain = entity.DifficultTerrain(choice(texture_grid), 
+            diff_terrain = entity.DifficultTerrain(choice(texture_grid),
                             position=self.from_grid_to_pixel(x,y))
             self.sprite_batch.add(diff_terrain)
             self.entities['diff_terrain'][(x, y)] = diff_terrain
-        
+
         # We build the distance matrix.
         self.dist_mat = DistanceMatrix(self.row, self.col)
         self.dist_mat.add_obstacles( self.entities['asteroids'].keys() )
         self.dist_mat.add_difficult_terrains(map_kwargs['difficult terrain']['cost factor'],
                                         self.entities['diff_terrain'].keys())
-        
+
         # Background image
         img=pyglet.resource.image("outer-space.jpg")
         self.bg_texture = pyglet.image.TileableTexture.create_for_image(img)
@@ -101,8 +101,8 @@ class GridLayer(cocos.layer.ScrollableLayer):
                             ('v2f', (col*CELL_WIDTH, row*CELL_WIDTH, col*CELL_WIDTH, (row+1)*CELL_WIDTH,
                                      (col+1)*CELL_WIDTH, (row+1)*CELL_WIDTH, (col+1)*CELL_WIDTH, row*CELL_WIDTH)),
                             ('c4B', (128, 128, 128, 0) * 4))
-        
-        
+
+
 
         # We build the lines of the grid.
         lines=[]
@@ -122,7 +122,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     ('c4B', (255, 0, 0, 100) * (self.col+1)*2))
                     )
         self.grid_visible = True
-        
+
         # We store key state
         self.bindings = { #key constant : button name
             key.LEFT:'left',
@@ -142,7 +142,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
             }
         # We want to call step every frame to scroll the map
         self.schedule(self.step)
-        
+
     def on_enter(self):
         "Called when the grid is displayed for the first time"
         super(GridLayer,self).on_enter()
@@ -151,7 +151,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         self.scroller = self.get_ancestor(cocos.layer.ScrollingManager)
         # How fast we can scroll
         self.scroller.fastness = 700
-    
+
     def draw(self, *args, **kwargs):
         glPushMatrix()
         self.transform()
@@ -161,7 +161,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Draw the rest
         self.grid_batch.draw()
         glPopMatrix()
-    
+
     def step(self, dt):
         "Called every frame to check if buttons were pressed and move the map."
         buttons = self.buttons
@@ -172,13 +172,13 @@ class GridLayer(cocos.layer.ScrollableLayer):
             new_pos = eu.Vector2(self.scroller.restricted_fx, self.scroller.restricted_fy)
             new_pos = new_pos + self.scroller.fastness*dt*move_dir.normalize()
             changed = True
-        
+
         if changed:
             self.update_focus(new_pos)
-    
+
     def generate_noise_terrain(self, params):
         """
-        Given the params to generate a simplex noise, returns a set of 
+        Given the params to generate a simplex noise, returns a set of
         the coords above the defined threshold in the parameters.
         Returns: set of tuples {(i,j), ...}
         """
@@ -204,7 +204,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         if self._is_invalid_grid(i, j):
             return (None, None)
         return i, j
-    
+
     def _is_invalid_grid(self, i, j):
         "Check if grid coords are in the grid"
         return i < 0 or j < 0 or not i < self.col or not j < self.row
@@ -219,24 +219,24 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Bearing with 0 for N, 90 for E, 180 for S and 270 for W
         bearing = (90 - angle) % 360
         return RotateTo(bearing, 0.1) + Delay(0.2)
-    
+
     def move_sprite(self, sprite, i, j):
         "Move sprite to the selected grid location"
         if self._is_invalid_grid(i,j):
             return
-        
+
         i0, j0 = self.from_pixel_to_grid(*(sprite.position))
         self.clear_cell(i0, j0)
         # Reconstruct the path
         path = self.dist_mat.reconstruct_path(i0, j0, i, j, self.battle.predecessor)
-        
+
         # Initialize the move and rotate with an empty action
         move = rotate = InstantAction()
         # Sequence moves to the next grid
         ox, oy = i0, j0
         for m, n in path:
             # We move in 0.3s to the next grid location
-            move = ( move + 
+            move = ( move +
                      MoveTo(self.from_grid_to_pixel(m, n), 0.3)
                     )
             # We rotate towards the next grid location in 0.1s and wait for 0.2s
@@ -245,29 +245,30 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     )
             ox, oy = m, n
         # And after the move, reset the selected ship
-        end_of_move = CallFunc(self.battle.game_phase[-1].on_move_finished)
+        # end_of_move = CallFunc(self.battle.game_phase[-1].on_move_finished)
+        end_of_move = CallFunc(self.battle.on_command_finished)
         move = move + end_of_move
         sprite.do(move)
         sprite.do(rotate)
         # Update the position in entities['ships']
         self.entities['ships'][(i, j)] = self.entities['ships'].pop( (i0, j0) )
-        
+
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"
         self.clear_cells(sprite.reachable_cells)
         del sprite.reachable_cells
         del sprite.predecessor
-        
+
     def from_grid_to_pixel(self, i, j):
         "Converts grid position to the center position of the cell in pixel"
         return (i*CELL_WIDTH + CELL_WIDTH/2, j*CELL_WIDTH + CELL_WIDTH/2)
-        
+
     def distance(self, objA, objB):
         "Returns the distance between two objects"
         i0, j0 = self.from_pixel_to_grid(*(objA.position))
         i1, j1 = self.from_pixel_to_grid(*(objB.position))
         return math.hypot((i0-i1), (j0-j1))
-    
+
     def clear_los(self, objA, objB):
         "Check if both objects have a clear line of sight"
         i0, j0 = self.from_pixel_to_grid(*(objA.position))
@@ -281,7 +282,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
                 cell != (i0, j0) and cell != (i1, j1):
                 return False
         return True
-        
+
     def get_reachable_cells(self, ship):
         """
         Forward this to the distance matrix. Remove any other ships from
@@ -291,7 +292,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, ship.speed)
         r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
         return r_cells, predecessor
-    
+
     def get_random_free_cells(self, side):
         "Returns a generator giving cells without obstacle in an area close to a border"
         # Left
@@ -330,39 +331,39 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     and self.clear_los(ship, entity):
                 targets.append(entity)
         return targets
-        
+
     def highlight_cell(self, i, j, color):
         "Highlight the cell in the given color."
         self.squares[i][j].colors = color * 4
-        
+
     def highlight_cells(self, cells, color):
         """Highlight the cells in the list in the given color."""
         for i, j in cells:
             self.highlight_cell(i, j, color)
-    
+
     def highlight_player(self, player):
         """Highlight the player' ships"""
         self.highlight_ships(player.fleet, PLAYER_TURN)
-    
+
     def highlight_ships(self, ships, color):
         cells = []
         for ship in ships:
             cells.append(self.from_pixel_to_grid(*(ship.position)))
         self.highlight_cells(cells, color)
-    
+
     def clear_cell(self, i, j):
         """Remove any highlight from the cell"""
         self.highlight_cell(i, j, CLEAR_CELL)
-    
+
     def clear_cells(self, cells):
         """Remove any highlight from the cells"""
         self.highlight_cells(cells, CLEAR_CELL)
-    
+
     def clear_ships_highlight(self, ships):
         """Remove any highlight from the ships"""
         self.highlight_ships(ships, CLEAR_CELL)
-            
-    def on_key_press(self, symbol, modifiers):        
+
+    def on_key_press(self, symbol, modifiers):
         # Check for key pressed in our key bindings
         binds = self.bindings
         if symbol in binds:
@@ -383,7 +384,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
             return True
         elif symbol == key.G:
             self.toggle_grid_lines()
-        
+
         binds = self.bindings
         if symbol in binds:
             self.buttons[binds[symbol]] = 0
@@ -395,17 +396,17 @@ class GridLayer(cocos.layer.ScrollableLayer):
             color = [255, 0, 0, 0]
         else:
             color = [255, 0, 0, 100]
-        
+
         self.borders[0].colors = color * (self.row+1)*2
         self.borders[1].colors = color * (self.col+1)*2
-            
+
         self.grid_visible = not self.grid_visible
-            
-    
+
+
     def update_focus(self, position):
         "Move the grid to the focus_position."
         self.scroller.set_focus(*position)
-    
+
     def add_player_fleet(self, player, side):
         """Add the ships from the player"""
         starting_cells = self.get_random_free_cells(side)
@@ -417,15 +418,15 @@ class GridLayer(cocos.layer.ScrollableLayer):
             ship.position = (x, y)
             ship.rotation = orientation[side]
             self.add(ship)
-    
+
     def remove(self, entity):
         "Removes the entity both from the Layer and from the dict entities"
         super(GridLayer, self).remove(entity)
         for grid_pos, ship in self.entities['ships'].items():
             if ship is entity:
                 del self.entities['ships'][grid_pos]
-             
-        
+
+
 
 class DistanceMatrix(object):
     """
@@ -449,12 +450,12 @@ class DistanceMatrix(object):
 
         # And convert this huge matrix to a sparse matrix.
         self.dist_mat = self.dist_mat.tocsc()
-    
-    def valid_grid(self, xo, yo):     
+
+    def valid_grid(self, xo, yo):
         "Helper function to check if we are in the grid and not in a wall."
         in_grid = not xo<0 and not yo<0 and xo<self.col and yo<self.row
         return in_grid
-    
+
     def _add_difficult_terrain(self, cf, i, j):
         "Add difficult terrain at position i,j. Cost factor is cf"
         for x_offset in (-1,0,1):
@@ -464,14 +465,14 @@ class DistanceMatrix(object):
                         self.dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = cf*math.sqrt(2)
                     elif x_offset or y_offset:
                         self.dist_mat[ (i+x_offset) + (j+y_offset) * self.col, i + j*self.col] = cf
-    
+
     def add_difficult_terrains(self, cf, diff_terrains):
         "Add list of difficult terrains at position (i,j). Cost factor is cf"
         self.dist_mat = self.dist_mat.tolil()
         for diff_terrain in diff_terrains:
             self._add_difficult_terrain(cf, *diff_terrain)
         self.dist_mat = self.dist_mat.tocsc()
-    
+
     def add_obstacles(self, obstacles):
         "Add obstacles at position (i, j)"
         # Change the distance matrix to lil format
@@ -480,7 +481,7 @@ class DistanceMatrix(object):
             self._add_obstacle(*obstacle)
         # Update the distance matrix in csc format
         self.dist_mat = self.dist_mat.tocsc()
-    
+
     def _add_obstacle(self, i, j):
         "Add obstacle at position i,j"
         grid_number = self.from_coord_to_cell_number(i, j)
@@ -502,13 +503,13 @@ class DistanceMatrix(object):
                    and self.dist_mat[grid_number, ctc(i+x, j+y)] == 0:
                     self.dist_mat[ctc(i, j+y), ctc(i+x, j)] = 0
                     self.dist_mat[ctc(i+x, j), ctc(i, j+y)] = 0
-                    
+
         # Set to 0 the whole col at grid_num as we cannot move into this position.
         self.dist_mat[: ,grid_number] = 0
-        
+
         # Set to 0 the whole row at grid_num as this is an obstacle and we cannot move
         # from this position.
-        self.dist_mat[grid_number, :] = 0 
+        self.dist_mat[grid_number, :] = 0
 
     def from_cell_number_to_coord(self, number):
         """
@@ -523,11 +524,11 @@ class DistanceMatrix(object):
         So cell 5 will return (1,1)
         """
         return (number%self.col, number//self.col)
-    
+
     def from_coord_to_cell_number(self, i, j):
         "See _from_cell_number_to_coord. Does the opposite"
         return i + j * self.col
-    
+
     def get_reachable_cells(self, i, j, speed):
         "Returns all the cells reachable from (i, j) and the predecessor matrix"
         origin = self.from_coord_to_cell_number(i, j)
@@ -537,7 +538,7 @@ class DistanceMatrix(object):
         # And convert it to a list of grid coordinates
         dist = map(self.from_cell_number_to_coord, dist)
         return dist, predecessor
-    
+
     def reconstruct_path(self, i0, j0, i, j, predecessor):
         "Reconstruct the shortest path going from (i0, j0) to (i, j)."
         origin = self.from_coord_to_cell_number(i0, j0)
@@ -546,10 +547,10 @@ class DistanceMatrix(object):
         if origin != dest:
             # Path is contructed in reversed order. From dest to origin.
             path=[(i, j)]
-            
+
             while predecessor[dest] != origin:
                 step_grid = predecessor[dest]
                 path.append(self.from_cell_number_to_coord(step_grid))
                 dest = step_grid
         return reversed(path)
-                
+
