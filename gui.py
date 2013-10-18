@@ -228,7 +228,6 @@ class SubMenu(Menu):
 class MenuLayer(cocos.layer.ColorLayer):
     def __init__(self, battle, ship, width, height):
         super(MenuLayer, self).__init__(*BACKGROUND, width=width, height=height)
-        self.battle = battle
         self.ship = ship
         weapon_menu = WeaponMenu(ship)
         self.add(weapon_menu, z=5, name="weapon_menu")
@@ -380,7 +379,7 @@ class BoostMenu(ShipMenu):
         l = []
         for idx, boost in enumerate(boosts):
             item = MenuItemDisableable(boost.name, battle.submit,
-                    commands.BoostCommand(battle, self.ship, idx),
+                    commands.BoostCommand(self.ship, idx),
                     disabled=ship.boost_used)
             l.append(item)
         self.create_menu(l, layout_strategy=horizontalMenuLayout)

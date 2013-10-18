@@ -115,7 +115,7 @@ class Battle(cocos.layer.Layer):
         if self.commands and not self.command_in_progress:
             command = self.commands.popleft()
             self.command_in_progress = True
-            command.execute()
+            command.execute(self)
 
     def on_command_finished(self):
         self.command_in_progress = False
@@ -387,8 +387,8 @@ class Attack(GamePhase):
         self.ennemy = ennemy
 
     def on_enter(self):
-        self.battle.submit(commands.AttackCommand(self.battle,
-                                            self.battle.selected, self.ennemy))
+        self.battle.submit(commands.AttackCommand(self.battle.selected,
+                                                            self.ennemy))
         if not self.battle.selected.boost_used:
             # If no boost yet used, disable the Boost Weapon
             self.battle.get("ship_menu").get("boost_menu").disable(2)
@@ -409,8 +409,8 @@ class Move(GamePhase):
         self.i, self.j = i, j
 
     def on_enter(self):
-        self.battle.submit(commands.MoveCommand(self.battle,
-                                        self.battle.selected, self.i, self.j))
+        self.battle.submit(commands.MoveCommand(self.battle.selected,
+                                                        self.i, self.j))
         self.battle.clear_reachable_cells()
         self.battle.deselect_targets()
         if not self.battle.selected.boost_used:
