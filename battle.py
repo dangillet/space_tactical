@@ -59,7 +59,6 @@ class Battle(cocos.layer.Layer):
         # Commands list
         self.commands = collections.deque()
         self.command_in_progress = False
-        self.schedule(self.process_commands)
         # Selected object from the grid and list of targets in range
         self.selected, self.targets = None, None
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
@@ -70,6 +69,7 @@ class Battle(cocos.layer.Layer):
             data = json.load(f)
             for player_data in data['players']:
                 player = entity.Player(player_data['name'])
+                player.set_ia("Albert", self)
                 self.players.append(player)
                 for ship_data in player_data['fleet']:
                     quantity = ship_data.get("count", 1)
@@ -85,6 +85,10 @@ class Battle(cocos.layer.Layer):
             self.scroller.add(self.battle_grid)
             self.add(self.scroller)
 
+    def on_enter(self):
+        super(Battle, self).on_enter()
+        self.schedule(self.process_commands)
+    
     def load_player(self):
         player = entity.Player.load()
         self.players.append(player)
@@ -94,7 +98,8 @@ class Battle(cocos.layer.Layer):
 
     def change_game_phase(self, game_phase):
         "Change the state of the game."
-        self.pop_game_phase()
+        while self.game_phase:
+            self.pop_game_phase()
         self.push_game_phase(game_phase)
 
     def push_game_phase(self, game_phase):
@@ -116,6 +121,8 @@ class Battle(cocos.layer.Layer):
             command = self.commands.popleft()
             self.command_in_progress = True
             command.execute(self)
+        if not self.commands and self.current_player.brain:
+            self.current_player.brain.think()
 
     def on_command_finished(self):
         self.command_in_progress = False
@@ -130,7 +137,7 @@ class Battle(cocos.layer.Layer):
         x, y = self.scroller.pixel_from_screen(x, y)
         # Transform mouse pos in local coord
         x, y = self.scroller.point_to_local((x, y))
-        i, j = self.battle_grid.from_pixel_to_grid(x, y)
+        i, j = self.battle_grid.from_pixel_to_grid( (x, y) )
         if i is None or j is None: return
 
         self.game_phase[-1].on_mouse_release(i, j, x, y)
@@ -143,10 +150,9 @@ class Battle(cocos.layer.Layer):
         self.game_phase[-1].on_mouse_motion(x, y)
 
     def on_key_release(self, symbol, modifiers):
-        # With Return, end of turn
-        if symbol == key.RETURN:
-            self.game_phase[-1].on_end_of_round()
-            return True
+        # With Return, end of turn for human players
+        return self.game_phase[-1].on_key_release(symbol, modifiers)
+        
 
     def select_ship(self):
         "Make the entity the selected ship."
@@ -159,11 +165,16 @@ class Battle(cocos.layer.Layer):
     def show_reachable_cells(self):
         "calculate and highlight the reachable cells"
         if not self.selected.move_completed:
-            self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(self.selected)
+            self.get_reachable_cells(self.selected)
             self.battle_grid.highlight_cells(self.reachable_cells, grid.REACHABLE_CELLS)
 
+    def get_reachable_cells(self, ship):
+        "Calculate the reachable cells"
+        self.reachable_cells, self.predecessor = self.battle_grid.get_reachable_cells(ship)
+        return self.reachable_cells
+
     def show_targets(self):
-        "Get targets in range"
+        "Show targets in range"
         if not self.selected.attack_completed \
            and self.selected.weapon is not None:
             self.targets = self.battle_grid.get_targets(self.selected)
@@ -186,8 +197,8 @@ class Battle(cocos.layer.Layer):
 
     def attack_ship(self, attacker, defender):
         "Attacker attacks the defender"
-        ox, oy = self.battle_grid.from_pixel_to_grid(*(attacker.position))
-        m, n = self.battle_grid.from_pixel_to_grid(*(defender.position))
+        ox, oy = self.battle_grid.from_pixel_to_grid(attacker.position)
+        m, n = self.battle_grid.from_pixel_to_grid(defender.position)
         attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
@@ -213,16 +224,15 @@ class Battle(cocos.layer.Layer):
 
     def on_damage(self, ship, dmg):
         if dmg > 0:
-            self.msg += _("""Nice shot, those bastards will soon meet the vacuum of space!
-We hardly stroke our ennemy, Commander.
-Well done,boys! Let's keep that fire rate.
-Yeahhh! {}\n""")
+            self.msg += _("""Nice shot, those bastards will soon meet the vacuum of space!{{}}
+[{ship} takes {dmg} points of damage]\n""").format(ship=ship.ship_type, dmg=dmg)
         else:
             self.msg += _("""This ship is invulnerable, we should avoid the showdown.
 Our weapon is badly... ineffective, Commander {}\n""")
 
     def on_destroyed(self, ship, energy_name):
-        self.msg += _("Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}\n").format(energy_name=energy_name)
+        self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
+[{ship} is destroyed.]\n""").format(energy_name=energy_name, ship=ship.ship_type)
         self.battle_grid.remove(ship)
 
     def on_missed(self):
@@ -234,6 +244,9 @@ Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
 
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
+        ship.move_completed = True
+        self.reachable_cells = None
+        self.predecessor = None
 
 
 
@@ -249,6 +262,9 @@ class GamePhase(object):
         pass
 
     def on_mouse_motion(self, x, y):
+        pass
+    
+    def on_key_release(self, symbol, modifiers):
         pass
 
     def on_command_finished(self):
@@ -285,8 +301,11 @@ class StaticGamePhase(GamePhase):
             director.replace(FadeBLTransition(game_over_scene, duration = 2))
         self.battle.current_player.reset_ships_turn()
         self.battle.on_new_turn()
-        self.battle_grid.highlight_player(self.battle.current_player)
-        self.battle.change_game_phase(Idle(self.battle))
+        if self.battle.current_player.brain is None: # Human player
+            self.battle_grid.highlight_player(self.battle.current_player)
+            self.battle.change_game_phase(Idle(self.battle))
+        else:
+            self.battle.change_game_phase(IATurn(self.battle))
 
 
 class Idle(StaticGamePhase):
@@ -311,6 +330,11 @@ class Idle(StaticGamePhase):
             self.battle.ship_info.set_model(entity)
         else:
             self.battle.ship_info.remove_model()
+    
+    def on_key_release(self, symbol, modifiers):
+        if symbol == key.RETURN:
+            self.on_end_of_round()
+            return True
 
 class ShipSelected(StaticGamePhase):
     def __init__(self, battle):
@@ -369,7 +393,14 @@ class ShipSelected(StaticGamePhase):
         else:
             self.battle.ship_info.set_model(self.selected)
 
+    def on_key_release(self, symbol, modifiers):
+        if symbol == key.RETURN:
+            self.on_end_of_round()
+            return True
+        return False
+    
     def on_end_of_round(self):
+        # Is this needed?
         self.battle.change_game_phase(Idle(self.battle))
         super(ShipSelected, self).on_end_of_round()
 
@@ -422,7 +453,19 @@ class Move(GamePhase):
 
     def on_exit(self):
         super(Move, self).on_exit()
-        self.battle.reachable_cells = None
-        self.battle.predecessor = None
-        self.battle.selected.move_completed = True
         self.battle.select_ship()
+
+class IATurn(StaticGamePhase):
+    def __init__(self, battle):
+        super(IATurn, self).__init__(battle)
+
+    def on_enter(self):
+        self.battle.current_player.brain.think()
+
+    def on_command_finished(self):
+        if self.battle.msg != PROMPT:
+            self.battle.log_info.prepend_text(self.battle.msg)
+            self.battle.msg = PROMPT
+
+    def on_exit(self):
+        super(IATurn, self).on_exit()

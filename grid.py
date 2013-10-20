@@ -196,8 +196,9 @@ class GridLayer(cocos.layer.ScrollableLayer):
             noise[x][y] = 255 - (math.pow(params['density'], c) * 255)
         return set(zip(*np.where(noise> 0.)))
 
-    def from_pixel_to_grid(self, x, y):
+    def from_pixel_to_grid(self, position):
         "Compute the cell coords from pixel coords"
+        x, y = position
         i, j = (int(x // CELL_WIDTH),
             int(y // CELL_WIDTH))
         # Did we click on the grid?
@@ -225,7 +226,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         if self._is_invalid_grid(i,j):
             return
 
-        i0, j0 = self.from_pixel_to_grid(*(sprite.position))
+        i0, j0 = self.from_pixel_to_grid(sprite.position)
         self.clear_cell(i0, j0)
         # Reconstruct the path
         path = self.dist_mat.reconstruct_path(i0, j0, i, j, self.battle.predecessor)
@@ -263,19 +264,19 @@ class GridLayer(cocos.layer.ScrollableLayer):
         "Converts grid position to the center position of the cell in pixel"
         return (i*CELL_WIDTH + CELL_WIDTH/2, j*CELL_WIDTH + CELL_WIDTH/2)
 
-    def distance(self, objA, objB):
+    def distance(self, posA, posB):
         "Returns the distance between two objects"
-        i0, j0 = self.from_pixel_to_grid(*(objA.position))
-        i1, j1 = self.from_pixel_to_grid(*(objB.position))
+        i0, j0 = posA
+        i1, j1 = posB
         return math.hypot((i0-i1), (j0-j1))
 
-    def clear_los(self, objA, objB):
+    def clear_los(self, posA, posB):
         "Check if both objects have a clear line of sight"
-        i0, j0 = self.from_pixel_to_grid(*(objA.position))
-        i1, j1 = self.from_pixel_to_grid(*(objB.position))
+        i0, j0 = posA
+        i1, j1 = posB
         los = library.get_line(i0, j0, i1, j1)
-        other_ships = {pos:ship for pos, ship in self.entities['ships'].iteritems()
-                        if (ship is not objA and ship is not objB)}
+        #other_ships = {pos:ship for pos, ship in self.entities['ships'].iteritems()
+                        #if (ship is not objA and ship is not objB)}
         for cell in los:
             if cell in self.entities['asteroids'] or \
                 cell in self.entities['ships'] and \
@@ -288,7 +289,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
         Forward this to the distance matrix. Remove any other ships from
         reachable cells so we can move through ships but not stop on another one.
         """
-        i, j = self.from_pixel_to_grid(*(ship.position))
+        i, j = self.from_pixel_to_grid(ship.position)
         r_cells, predecessor = self.dist_mat.get_reachable_cells(i, j, ship.speed)
         r_cells = [cell for cell in r_cells if cell not in self.entities['ships']]
         return r_cells, predecessor
@@ -318,17 +319,20 @@ class GridLayer(cocos.layer.ScrollableLayer):
 
     def get_entity(self, x, y):
         "Return the entity at position x, y"
-        i, j = self.from_pixel_to_grid(x, y)
+        i, j = self.from_pixel_to_grid( (x, y) )
         return self.entities['ships'].get( (i, j) )
 
-    def get_targets(self, ship):
+    def get_targets(self, ship, position=None):
         "Returns the list of all ennemy ships in range"
         current_player = ship.player
+        if position is None:
+            position = self.from_pixel_to_grid(ship.position)
         targets = []
         for entity in self.entities['ships'].itervalues():
+            target_pos = self.from_pixel_to_grid(entity.position)
             if entity.player != current_player \
-                    and self.distance(ship, entity) <= ship.weapon.range \
-                    and self.clear_los(ship, entity):
+                    and self.distance(position, target_pos) <= ship.weapon.range \
+                    and self.clear_los(position, target_pos):
                 targets.append(entity)
         return targets
 
@@ -348,7 +352,7 @@ class GridLayer(cocos.layer.ScrollableLayer):
     def highlight_ships(self, ships, color):
         cells = []
         for ship in ships:
-            cells.append(self.from_pixel_to_grid(*(ship.position)))
+            cells.append(self.from_pixel_to_grid(ship.position))
         self.highlight_cells(cells, color)
 
     def clear_cell(self, i, j):
@@ -547,10 +551,10 @@ class DistanceMatrix(object):
         if origin != dest:
             # Path is contructed in reversed order. From dest to origin.
             path=[(i, j)]
-
             while predecessor[dest] != origin:
                 step_grid = predecessor[dest]
                 path.append(self.from_cell_number_to_coord(step_grid))
                 dest = step_grid
+
         return reversed(path)
 

@@ -11,7 +11,7 @@ class MoveCommand(Command):
         self.i, self.j = i, j
 
     def execute(self, battle):
-        battle.battle_grid.move_sprite(self.ship, self.i, self.j)
+        battle.move_ship(self.ship, self.i, self.j)
 
 class AttackCommand(Command):
     def __init__(self, ship, ennemy):
@@ -32,3 +32,7 @@ class BoostCommand(Command):
         self.ship.use_boost(self.boost_idx)
         battle.on_command_finished()
 
+class EndOfRoundCommand(Command):
+    def execute(self, battle):
+        battle.game_phase[-1].on_end_of_round()
+        battle.on_command_finished()

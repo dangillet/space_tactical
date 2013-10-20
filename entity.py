@@ -6,7 +6,7 @@ from cocos.text import *
 from pyglet import event
 from pyglet.gl import *
 
-import main
+import main, ia
 
 COOLDOWN = 100
 
@@ -18,10 +18,10 @@ class Damage(object):
     def __init__(self, minimum, maximum):
         self.min = minimum
         self.max = maximum
-    
+
     def __repr__(self):
         return "%d-%d" % (self.min, self.max)
-    
+
     def roll(self):
         return random.randint(self.min, self.max)
 
@@ -29,9 +29,9 @@ class EnergyType(object):
     "Class holding the different energy types."
     # Damage Type provided here for translation.
     [_("URANIUM"), _("PLASMA"), _("SONIC"), _("WARP")]
-    
+
     names = ["URANIUM", "PLASMA", "SONIC", "WARP"]
-    
+
     @classmethod
     def name(cls, index):
         "Returns the translated energy_type name"
@@ -42,7 +42,7 @@ class Mod(object):
     slots = {} # Some mods could have mods themselves, like a weapon has mod_weapon
     def __init__(self, parent=None):
         self.parent = parent
-    
+
     @abc.abstractmethod
     def use(self):
         return
@@ -50,7 +50,7 @@ class Mod(object):
     @abc.abstractmethod
     def reverse(self):
         return
-    
+
     @abc.abstractproperty
     def name(self):
         return ''
@@ -61,14 +61,14 @@ class ModSpeed(Mod):
         super(ModSpeed, self).__init__()
         self.level = level
         self.type = "mobility"
-    
+
     @property
     def name(self):
         return " ".join( (_("Speed"), "+%i" % (self.level)) )
-    
+
     def use(self):
         self.parent.speed += self.level
-    
+
     def reverse(self):
         self.parent.speed -= self.level
 
@@ -77,11 +77,11 @@ class ModWeapon(Mod):
         super(ModWeapon, self).__init__()
         self.level = level
         self.type = "mod_weapon"
-    
+
     @property
     def name(self):
         return _("Weapon Mod")
-    
+
     def use(self):
         weapon = self.parent
         weapon.damage.min += self.level * 2
@@ -90,7 +90,7 @@ class ModWeapon(Mod):
         print weapon.rof
         weapon.heating = float(100/weapon.rof)
         weapon.reliability -= 0.02 * self.level
-    
+
     def reverse(self):
         weapon = self.parent
         weapon.damage.min -= self.level * 2
@@ -98,9 +98,9 @@ class ModWeapon(Mod):
         weapon.rof -= self._rof_delta(weapon.rof)
         weapon.heating = float(100/weapon.rof)
         weapon.reliability += 0.02 * self.level
-    
+
     def _rof_delta(self, rof):
-        """ 
+        """
         We want the rof to increase according to this serie
         1/2..2/3..3/4..4/5..5/6..n/n+1
         To go from n-1/n to n/n+1 you need to add 1/(n*(n+1))
@@ -110,7 +110,7 @@ class ModWeapon(Mod):
         """
         n = rof.denominator
         k = n - rof.numerator
-        return fractions.Fraction(numerator=k, 
+        return fractions.Fraction(numerator=k,
                                 denominator=n*(n+1) )
 
 class ModShield(Mod):
@@ -120,18 +120,18 @@ class ModShield(Mod):
         self.energy_type = EnergyType.names.index(energy_type)
         self.pr = level * 2
         self.type = "defense"
-        
+
     @property
     def name(self):
         return " ".join( (_("Shield"),
                 "%i/%s" %(self.pr, EnergyType.name(self.energy_type))) )
-    
+
     def use(self):
         if self.energy_type in self.parent.shield:
             self.parent.shield[self.energy_type] += self.pr
         else:
             self.parent.shield[self.energy_type] = self.pr
-    
+
     def reverse(self):
         if self.parent.shield[self.energy_type] == self.pr:
             del self.parent.shield[self.energy_type]
@@ -144,15 +144,15 @@ class ModHull(Mod):
         self.level = level
         self.hull_increase = self.level * 5
         self.type = "defense"
-        
+
     @property
     def name(self):
         return " ".join( (_("Hull"),
                 "+%i" %(self.hull_increase)) )
-    
+
     def use(self):
         self.parent.hull += self.hull_increase
-    
+
     def reverse(self):
         self.parent.hull -= self.hull_increase
 
@@ -163,7 +163,7 @@ class Slot(event.EventDispatcher):
         self.type = slot_type
         self.max_count = max_count
         self.mods = []
-    
+
     def add_mod(self, mod):
         if len(self.mods) == self.max_count:
             return False
@@ -172,10 +172,10 @@ class Slot(event.EventDispatcher):
         mod.use()
         self.dispatch_event("on_change")
         return True
-    
+
     def remove_mod(self, mod):
         # Ships should have at least one weapon with reliability 100%
-        if mod.type == "weapon" and not [weapon for weapon in self.mods if 
+        if mod.type == "weapon" and not [weapon for weapon in self.mods if
                 (weapon != mod and weapon.reliability == 1.0)]:
             return False
         if mod not in self.mods:
@@ -185,13 +185,13 @@ class Slot(event.EventDispatcher):
         mod.parent = None
         self.dispatch_event("on_change")
         return True
-    
+
     def remove_all_mods(self):
         for mod in self.mods:
             self.mods.remove(mod)
             mod.reverse()
             mod.parent = None
-    
+
     def __contains__(self, mod):
         return mod in self.mods
 
@@ -199,7 +199,7 @@ Slot.register_event_type("on_change")
 
 class Weapon(Mod):
     """
-    Weapon with all its caracteristics. 
+    Weapon with all its caracteristics.
     """
     def __init__( self, weapon_type, slots, weapon_range, precision, rof,
                   reliability, dmg_type, dmg):
@@ -215,21 +215,21 @@ class Weapon(Mod):
         self.reliability = reliability
         self.energy_type = dmg_type # index of the EnergyType.names list
         self.damage = Damage(dmg[0], dmg[1])
-        self.slots = { slot_type: Slot(self, slot_type, max_count) 
+        self.slots = { slot_type: Slot(self, slot_type, max_count)
                         for slot_type, max_count in slots.iteritems() }
-        
+
         self.is_inop = False
-    
+
     @property
     def name(self):
         return self._name
-    
+
     def use(self):
         pass
-    
+
     def reverse(self):
         pass
-    
+
     def __str__(self):
         return """
 %s
@@ -243,27 +243,27 @@ Reliability: %d%%
     def hit(self):
         "Returns True if the weapon hit."
         return random.random() <= self.precision
-    
+
     def fumble(self):
         "Returns True if the weapon jammed."
         if random.random() > self.reliability:
             self.is_inop = True
             return True
         return False
-    
+
     def fire(self):
         self.temperature += self.heating
-    
+
     def reset_turn(self):
         self.temperature = max(0, self.temperature - COOLDOWN)
-    
+
     def add_mod(self, mod):
         if self.slots[mod.type].add_mod(mod):
             if self.parent is not None:
                 self.parent.dispatch_event("on_change")
             return True
         return False
-    
+
     def remove_mod(self, mod):
         if mod.type not in self.slots:
             return False
@@ -277,13 +277,13 @@ class Boost(Mod):
     def __init__(self, ship):
         super(Boost, self).__init__(ship)
         self.used = False
-    
+
     def use(self):
         self.used = True
-    
+
     def reverse(self):
         self.used = False
-    
+
     @abc.abstractproperty
     def name(self):
         return ''
@@ -291,16 +291,16 @@ class Boost(Mod):
 class BoostSpeed(Boost):
     def __init__(self, ship):
         super(BoostSpeed, self).__init__(ship)
-    
+
     @property
     def name(self):
         return _("Boost Speed")
-    
+
     def use(self):
         super(BoostSpeed, self).use()
         self.parent.speed += 2
         self.parent.dispatch_event("on_speed_change")
-    
+
     def reverse(self):
         super(BoostSpeed, self).reverse()
         self.parent.speed -= 2
@@ -308,18 +308,18 @@ class BoostSpeed(Boost):
 class BoostWeaponDamage(Boost):
     def __init__(self, ship):
         super(BoostWeaponDamage, self).__init__(ship)
-    
+
     @property
     def name(self):
         return _("Boost Weapon")
-        
+
     def use(self):
         super(BoostWeaponDamage, self).use()
         damage = self.parent.weapon.damage
         damage.min += 5
         damage.max += 5
         self.parent.dispatch_event("on_change")
-    
+
     def reverse(self):
         super(BoostWeaponDamage, self).reverse()
         damage = self.parent.weapon.damage
@@ -329,17 +329,17 @@ class BoostWeaponDamage(Boost):
 class BoostShield(Boost):
     def __init__(self, ship):
         super(BoostShield, self).__init__(ship)
-    
+
     @property
     def name(self):
         return _("Boost Shield")
-    
+
     def use(self):
         super(BoostShield, self).use()
         for energy_type in self.parent.shield.iterkeys():
             self.parent.shield[energy_type] += 5
         self.parent.dispatch_event("on_change")
-    
+
     def reverse(self):
         super(BoostShield, self).reverse()
         for energy_type in self.parent.shield.iterkeys():
@@ -363,14 +363,14 @@ class Ship(cocos.sprite.Sprite):
         self.boosts = [BoostShield(self),
                     BoostSpeed(self),
                     BoostWeaponDamage(self)]
-        self.slots = { slot_type: Slot(self, slot_type, max_count) 
+        self.slots = { slot_type: Slot(self, slot_type, max_count)
                         for slot_type, max_count in slots.iteritems() }
         self.weapon_idx = 0
-        
+
         self.boost_used = False
         self._move_completed = False
         self._attack_completed = False
-        
+
         self.label = Label('',
                             font_name = "Classic Robot",
                             font_size = 10,
@@ -379,7 +379,7 @@ class Ship(cocos.sprite.Sprite):
                             anchor_x = "center",
                             x = 20,
                             y = -20)
-    
+
     def draw(self):
         super(Ship, self).draw()
         glPushMatrix()
@@ -390,30 +390,30 @@ class Ship(cocos.sprite.Sprite):
                 - self.transform_anchor_x,
                 - self.transform_anchor_y,
                 0 )
-        
+
         self.label.draw()
         glPopMatrix()
-        
+
     @property
     def move_completed(self):
         return self._move_completed
-    
+
     @move_completed.setter
     def move_completed(self, value):
         if value is True:
             self.label.element.text = self.label.element.text.replace('M','')
         self._move_completed = value
-    
+
     @property
     def attack_completed(self):
         return self._attack_completed
-    
+
     @attack_completed.setter
     def attack_completed(self, value):
         if value is True:
             self.label.element.text = self.label.element.text.replace('A','')
         self._attack_completed = value
-    
+
     @property
     def weapon(self):
         if self.weapon_idx is not None:
@@ -432,7 +432,7 @@ Speed: %d\tHull: %d\tShield: %s
 Weapon:
 %s""" % (self.weapon)
         return s
-    
+
     # Need to change this to a setter of self.weapon
     def change_weapon(self, idx):
         self.weapon_idx = idx
@@ -445,7 +445,7 @@ Weapon:
             self.dispatch_event("on_change")
             return True
         return False
-    
+
     def remove_mod(self, mod):
         if mod.type not in self.slots:
             # Check if this mod is attached to one of the current mods
@@ -457,13 +457,13 @@ Weapon:
             self.dispatch_event("on_change")
             return True
         return False
-        
+
     def use_boost(self, idx):
         if not self.boost_used:
             self.boosts[idx].use()
             self.boost_used = True
             self.dispatch_event("on_boost_use")
-        
+
     def reset_turn(self):
         self.move_completed = False
         self.attack_completed = False
@@ -473,7 +473,7 @@ Weapon:
         if self.boost_used:
             [boost.reverse() for boost in self.boosts if boost.used]
             self.boost_used = False
-    
+
     def attack(self, defender):
         weapon = self.weapon
         weapon.fire()
@@ -486,8 +486,8 @@ Weapon:
             defender.take_damage(dmg, weapon.energy_type)
         else:
             self.dispatch_event("on_missed")
-            
-    
+
+
     def take_damage(self, damage, energy_type):
         # If our shield is against the weapon energy type, use it
         protection = self.shield.get(energy_type, 0)
@@ -509,7 +509,8 @@ Ship.register_event_type("on_speed_change")
 Ship.register_event_type("on_boost_use")
 
 class Player(object):
-    def __init__(self, name):
+    ias = {'Albert':ia.Brain}
+    def __init__(self, name, ia=None):
         """Initialize the Player
             name: str
                 The player name
@@ -519,26 +520,27 @@ class Player(object):
         self.name = name
         self.fleet = []
         self.inventory = []
-    
+        self.brain = None
+
     def add_ship(self, ship):
         "Add a ship to the fleet"
         ship.player = self
         self.fleet.append(ship)
-    
+
     def destroy_ship(self, ship):
         "Destroys a ship from the fleet"
         self.fleet.remove(ship)
-    
+
     def reset_ships_turn(self):
         """Reset the ships move and attack completed"""
         for ship in self.fleet:
             ship.reset_turn()
-    
+
     def on_end_of_turn(self):
         "Any logic happening when the turns end."
         for ship in self.fleet:
             ship.label.element.text = ''
-    
+
     def add_mod_to_inventory(self, mod):
         """
         Add mod to the inventory. If mod has sub-mods, detach them from the mod
@@ -549,7 +551,11 @@ class Player(object):
                 slot.remove_mod(_mod)
                 self.add_mod_to_inventory(_mod)
         self.inventory.append(mod)
-    
+
+    def set_ia(self, ia_name, battle):
+        IA_Klass = self.ias[ia_name]
+        self.brain = IA_Klass(self, battle)
+
     @staticmethod
     def load():
         "Loads the player from player.json file"
@@ -564,7 +570,7 @@ class Player(object):
                         ship = ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         player.add_ship(ship)
-            
+
             for mod in data['inventory']:
                 player.inventory.append(ships_factory.create_mod(mod))
             return player
@@ -600,7 +606,7 @@ class ShipFactory(object):
                      fractions.Fraction(v['rate of fire']),
                      v['reliability'],
                      # The index of the energy type in the list of energies
-                     EnergyType.names.index(v['energy_type']), 
+                     EnergyType.names.index(v['energy_type']),
                      v['damage']
                     )
             # Read all the ships
@@ -621,7 +627,7 @@ class ShipFactory(object):
                     )
         # And load the different mods classes
         self.ModKlasses = [ModSpeed, ModShield, ModHull, ModWeapon]
-    
+
     def create_ship(self, ship_type, mods=[]):
         "Create a new ship of type ship_type with its mods"
         # Only if there are no mods, we equip the ship with the default weapons
@@ -635,7 +641,7 @@ class ShipFactory(object):
             mod_instance = self.create_mod(mod)
             ship.add_mod(mod_instance)
         return ship
-    
+
     def create_mod(self, mod):
         "Creates a mod which could be a weapon"
         mod = collections.deque(mod) #Need a copy as we alter the list
@@ -651,14 +657,14 @@ class ShipFactory(object):
             for _mod in mod:
                 weapon.add_mod(self.create_mod(_mod))
             return weapon
-    
+
     def create_weapon(self, weapon_type):
         weapon_args = self.weapons[weapon_type]
         return Weapon(*weapon_args)
-    
+
 if __name__ == '__main__':
     from cocos.director import director
-    
+
     director.init(width = 1600, height=900)
     main.load_resource()
     ships_factory = ShipFactory()
