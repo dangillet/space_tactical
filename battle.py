@@ -225,14 +225,13 @@ class Battle(cocos.layer.Layer):
     def on_damage(self, ship, dmg):
         if dmg > 0:
             self.msg += _("""Nice shot, those bastards will soon meet the vacuum of space!{{}}
-[{ship} takes {dmg} points of damage]\n""").format(ship=ship.ship_type, dmg=dmg)
+[{{color (200, 100, 0, 255)}}{ship} takes {dmg} points of damage{{color (200, 200, 200, 255)}}]{{}}\n""").format(ship=ship.ship_type, dmg=dmg)
         else:
-            self.msg += _("""This ship is invulnerable, we should avoid the showdown.
-Our weapon is badly... ineffective, Commander {}\n""")
+            self.msg += _("""Our weapon is badly... ineffective, Commander {}\n""")
 
     def on_destroyed(self, ship, energy_name):
         self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
-[{ship} is destroyed.]\n""").format(energy_name=energy_name, ship=ship.ship_type)
+[{{color (200, 0, 0, 255)}}{ship} is destroyed.{{color (200, 200, 200, 255)}}]{{}}\n""").format(energy_name=energy_name, ship=ship.ship_type)
         self.battle_grid.remove(ship)
 
     def on_missed(self):
