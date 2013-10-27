@@ -3,7 +3,7 @@ from itertools import cycle
 import json, collections
 
 import cocos
-from cocos.actions import CallFunc, CallFuncS
+from cocos.actions import CallFunc, CallFuncS, Show, Hide, Delay
 from cocos.director import director
 
 from cocos.scenes import *
@@ -12,7 +12,7 @@ from pyglet.window import key
 from pyglet.gl import *
 import pyglet
 
-import grid, entity, main, gui, game_over, commands
+import grid, entity, main, gui, game_over, commands, laser
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
@@ -64,6 +64,8 @@ class Battle(cocos.layer.Layer):
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
 
+        self.battle_grid.add(laser.LaserBeam(), z=1, name='laser')
+
     def load_battlemap(self):
         with open("battlemap.json") as f:
             data = json.load(f)
@@ -88,7 +90,7 @@ class Battle(cocos.layer.Layer):
     def on_enter(self):
         super(Battle, self).on_enter()
         self.schedule(self.process_commands)
-    
+
     def load_player(self):
         player = entity.Player.load()
         self.players.append(player)
@@ -152,7 +154,7 @@ class Battle(cocos.layer.Layer):
     def on_key_release(self, symbol, modifiers):
         # With Return, end of turn for human players
         return self.game_phase[-1].on_key_release(symbol, modifiers)
-        
+
 
     def select_ship(self):
         "Make the entity the selected ship."
@@ -197,18 +199,39 @@ class Battle(cocos.layer.Layer):
 
     def attack_ship(self, attacker, defender):
         "Attacker attacks the defender"
+        destroyed = attacker.attack(defender)
         ox, oy = self.battle_grid.from_pixel_to_grid(attacker.position)
         m, n = self.battle_grid.from_pixel_to_grid(defender.position)
-        attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
+
+        def _remove_ship(ship):
+            explosion = cocos.sprite.Sprite(self.battle_grid.explosion_anim,
+                                position=ship.position)
+            explosion.push_handlers(self)
+            self.battle_grid.add(explosion, name="explosion")
+            ship.player.destroy_ship(ship)
+            self.battle_grid.remove(ship)
+
+        def _show_laser(destroyed, defender):
+            laser = self.battle_grid.get("laser")
+            direction = cocos.euclid.Vector2(x=m-ox, y=n-oy).normalize()
+            laser.pos_from = attacker.position + direction * grid.CELL_WIDTH/2.
+            laser.pos_to = defender.position
+            laser.free()
+            action = Show() + Delay(0.1) + Hide()
+            if destroyed:
+                action = action + CallFunc(_remove_ship, defender)
+            else:
+                action = action + CallFunc(self.on_command_finished)
+            laser.do(action)
+
+        action = self.battle_grid.rotate_to_bearing(m, n, ox, oy) + CallFunc(_show_laser, destroyed, defender)
+        attacker.do(action)
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
 #{color [0, 255, 0, 255]}%s
 #{color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 #ship.{}
 #""") % (attacker.player.name, defender.player.name)
-
-        attacker.attack(defender)
-        self.on_command_finished()
 
     def on_weapon_change(self):
         self.deselect_targets()
@@ -232,7 +255,7 @@ class Battle(cocos.layer.Layer):
     def on_destroyed(self, ship, energy_name):
         self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
 [{{color (200, 0, 0, 255)}}{ship} is destroyed.{{color (200, 200, 200, 255)}}]{{}}\n""").format(energy_name=energy_name, ship=ship.ship_type)
-        self.battle_grid.remove(ship)
+        #self.battle_grid.remove(ship)
 
     def on_missed(self):
         self.msg += _("""Commander, our offensive totally missed.
@@ -240,6 +263,12 @@ Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
 
     def on_new_turn(self):
         self.msg += _("{player.name}'s turn begins... {{}}\n").format(player=self.current_player)
+
+    def on_animation_end(self):
+        explosion = self.battle_grid.get("explosion")
+        explosion.pop_handlers()
+        self.battle_grid.remove("explosion")
+        self.on_command_finished()
 
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
@@ -262,7 +291,7 @@ class GamePhase(object):
 
     def on_mouse_motion(self, x, y):
         pass
-    
+
     def on_key_release(self, symbol, modifiers):
         pass
 
@@ -329,7 +358,7 @@ class Idle(StaticGamePhase):
             self.battle.ship_info.set_model(entity)
         else:
             self.battle.ship_info.remove_model()
-    
+
     def on_key_release(self, symbol, modifiers):
         if symbol == key.RETURN:
             self.on_end_of_round()
@@ -397,7 +426,7 @@ class ShipSelected(StaticGamePhase):
             self.on_end_of_round()
             return True
         return False
-    
+
     def on_end_of_round(self):
         # Is this needed?
         self.battle.change_game_phase(Idle(self.battle))
