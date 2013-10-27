@@ -64,7 +64,7 @@ class Battle(cocos.layer.Layer):
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
 
-        self.add(laser.LaserBeam(), z=1, name='laser')
+        self.battle_grid.add(laser.LaserBeam(), z=1, name='laser')
 
     def load_battlemap(self):
         with open("battlemap.json") as f:
@@ -200,9 +200,29 @@ class Battle(cocos.layer.Layer):
 
     def attack_ship(self, attacker, defender):
         "Attacker attacks the defender"
+        destroyed = attacker.attack(defender)
         ox, oy = self.battle_grid.from_pixel_to_grid(attacker.position)
         m, n = self.battle_grid.from_pixel_to_grid(defender.position)
-        attacker.do(self.battle_grid.rotate_to_bearing(m, n, ox, oy))
+
+        def _remove_ship(ship):
+            ship.player.destroy_ship(ship)
+            self.battle_grid.remove(ship)
+
+        def _show_laser(destroyed, defender):
+            laser = self.battle_grid.get("laser")
+            direction = cocos.euclid.Vector2(x=m-ox, y=n-oy).normalize()
+            laser.pos_from = attacker.position + direction * grid.CELL_WIDTH/2.
+            laser.pos_to = defender.position
+            laser.free()
+            action = Show() + Delay(0.1) + Hide()
+            if destroyed:
+                action = action + CallFunc(_remove_ship, defender)
+            laser.do(action)
+
+        action = self.battle_grid.rotate_to_bearing(m, n, ox, oy) + CallFunc(_show_laser, destroyed, defender)
+
+        action = action + CallFunc(self.on_command_finished)
+        attacker.do(action)
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
 #{color [0, 255, 0, 255]}%s
@@ -210,12 +230,7 @@ class Battle(cocos.layer.Layer):
 #ship.{}
 #""") % (attacker.player.name, defender.player.name)
 
-        attacker.attack(defender)
-        laser = self.get("laser")
-        laser.pos_from = attacker.position
-        laser.pos_to = defender.position
-        laser.free()
-        laser.do(Show() + Delay(5) + Hide() + CallFunc(self.on_command_finished))
+
 
     def on_weapon_change(self):
         self.deselect_targets()
@@ -239,7 +254,7 @@ class Battle(cocos.layer.Layer):
     def on_destroyed(self, ship, energy_name):
         self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
 [{{color (200, 0, 0, 255)}}{ship} is destroyed.{{color (200, 200, 200, 255)}}]{{}}\n""").format(energy_name=energy_name, ship=ship.ship_type)
-        self.battle_grid.remove(ship)
+        #self.battle_grid.remove(ship)
 
     def on_missed(self):
         self.msg += _("""Commander, our offensive totally missed.

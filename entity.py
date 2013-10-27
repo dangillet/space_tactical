@@ -475,6 +475,7 @@ Weapon:
             self.boost_used = False
 
     def attack(self, defender):
+        "Process the attack actions. Returns if the defender was destroyed."
         weapon = self.weapon
         weapon.fire()
         self.dispatch_event("on_change")
@@ -483,12 +484,14 @@ Weapon:
             self.dispatch_event("on_weapon_jammed", weapon)
         elif weapon.hit():
             dmg = weapon.damage.roll()
-            defender.take_damage(dmg, weapon.energy_type)
+            return defender.take_damage(dmg, weapon.energy_type)
         else:
             self.dispatch_event("on_missed")
+        return False
 
 
     def take_damage(self, damage, energy_type):
+        "Apply damage and returns if the ship was destroyed."
         # If our shield is against the weapon energy type, use it
         protection = self.shield.get(energy_type, 0)
         # Take min 0 damage if shield is greater than dmg
@@ -497,7 +500,9 @@ Weapon:
         self.dispatch_event("on_damage", self, damage)
         if self.hull <= 0:
             self.dispatch_event("on_destroyed", self, EnergyType.name(energy_type))
-            self.player.destroy_ship(self)
+
+            return True
+        return False
 
 Ship.register_event_type("on_change")
 Ship.register_event_type("on_weapon_jammed")
