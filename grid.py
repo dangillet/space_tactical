@@ -123,6 +123,13 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     )
         self.grid_visible = True
 
+        # We prepare the explosion animation
+        raw = pyglet.resource.image('explosion.png')
+        raw_seq = pyglet.image.ImageGrid(raw, 1, 90)
+        texture_seq = pyglet.image.TextureGrid(raw_seq)
+
+        self.explosion_anim = pyglet.image.Animation.from_image_sequence(texture_seq, 0.02, False)
+
         # We store key state
         self.bindings = { #key constant : button name
             key.LEFT:'left',

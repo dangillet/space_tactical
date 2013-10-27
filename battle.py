@@ -80,7 +80,6 @@ class Battle(cocos.layer.Layer):
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         ship.scale = float(grid.CELL_WIDTH) / ship.width
-                        ship.laser_beam = cocos.euclid.Vector2(0, grid.CELL_WIDTH/2.)/ship.scale
                         ship.push_handlers(self)
                         player.add_ship(ship)
             self.battle_grid = grid.GridLayer(data['battlemap'])
@@ -205,6 +204,10 @@ class Battle(cocos.layer.Layer):
         m, n = self.battle_grid.from_pixel_to_grid(defender.position)
 
         def _remove_ship(ship):
+            explosion = cocos.sprite.Sprite(self.battle_grid.explosion_anim,
+                                position=ship.position)
+            explosion.push_handlers(self)
+            self.battle_grid.add(explosion, name="explosion")
             ship.player.destroy_ship(ship)
             self.battle_grid.remove(ship)
 
@@ -217,11 +220,11 @@ class Battle(cocos.layer.Layer):
             action = Show() + Delay(0.1) + Hide()
             if destroyed:
                 action = action + CallFunc(_remove_ship, defender)
+            else:
+                action = action + CallFunc(self.on_command_finished)
             laser.do(action)
 
         action = self.battle_grid.rotate_to_bearing(m, n, ox, oy) + CallFunc(_show_laser, destroyed, defender)
-
-        action = action + CallFunc(self.on_command_finished)
         attacker.do(action)
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
@@ -229,8 +232,6 @@ class Battle(cocos.layer.Layer):
 #{color [255, 255, 255, 255]} fires at {color [0, 255, 0, 255]}%s{color [255, 255, 255, 255]}'s
 #ship.{}
 #""") % (attacker.player.name, defender.player.name)
-
-
 
     def on_weapon_change(self):
         self.deselect_targets()
@@ -262,6 +263,12 @@ Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
 
     def on_new_turn(self):
         self.msg += _("{player.name}'s turn begins... {{}}\n").format(player=self.current_player)
+
+    def on_animation_end(self):
+        explosion = self.battle_grid.get("explosion")
+        explosion.pop_handlers()
+        self.battle_grid.remove("explosion")
+        self.on_command_finished()
 
     def move_ship(self, ship, i, j):
         self.battle_grid.move_sprite(ship, i, j)
