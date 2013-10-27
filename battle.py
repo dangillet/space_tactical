@@ -247,10 +247,30 @@ class Battle(cocos.layer.Layer):
 
     def on_damage(self, ship, dmg):
         if dmg > 0:
-            self.msg += _("""Nice shot, those bastards will soon meet the vacuum of space!{{}}
-[{{color (200, 100, 0, 255)}}{ship} takes {dmg} points of damage{{color (200, 200, 200, 255)}}]{{}}\n""").format(ship=ship.ship_type, dmg=dmg)
+            if self.current_player.brain:
+                # IA attacks
+                msg = [_("Fire in the lower bridge, evacuate this area!{}\n")]
+                if 0 < ship.hull < 10:
+                    msg.extend([_("Commander, our ship won't hold for long...{}\n"),
+                                 _("Breach in the hull ! Perhaps we should think about another approach, Sir.{}\n")])
+            else:
+                #Player attacks
+                msg = [_("Nice shot, those bastards will soon meet the vacuum of space!{}\n"),
+                        _("We hit hard our enemy, Commander.{}\n"),
+                        _("Well done,boys! Let's keep that fire rate.{}\n"),
+                        _("Yeahhh!{}\n") ]
+
+            self.msg += random.choice(msg) + \
+                    _("[{{color (200, 100, 0, 255)}}{ship} takes {dmg} points of damage{{color (200, 200, 200, 255)}}]{{}}\n").format(ship=ship.ship_type, dmg=dmg)
+
         else:
-            self.msg += _("""Our weapon is badly... ineffective, Commander {}\n""")
+            if self.current_player.brain:
+                msg = [_("Shields hold on, Sir.{}\n"),
+                        _("Their weapon are painless.{}\n") ]
+            else:
+                msg = [_("This ship is invulnerable, we should avoid the confrontation.{}\n"),
+                        _("Our weapon is badly... ineffective, Commander.{}\n") ]
+            self.msg += random.choice(msg)
 
     def on_destroyed(self, ship, energy_name):
         self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
@@ -258,8 +278,13 @@ class Battle(cocos.layer.Layer):
         #self.battle_grid.remove(ship)
 
     def on_missed(self):
-        self.msg += _("""Commander, our offensive totally missed.
-Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n""")
+        if self.current_player.brain:
+            msg = [_("Focus on that enemy before they blast us!{}\n"),
+                    _("We are under fire, avoidance maneuver required...{}\n")]
+        else:
+            msg = [_("Commander, our offensive totally missed.{}\n"),
+                    _("Gunnery, focus on our ennemy if you want to see our homeplanet again.{}\n")]
+        self.msg += random.choice(msg)
 
     def on_new_turn(self):
         self.msg += _("{player.name}'s turn begins... {{}}\n").format(player=self.current_player)
