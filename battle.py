@@ -3,7 +3,7 @@ from itertools import cycle
 import json, collections
 
 import cocos
-from cocos.actions import CallFunc, CallFuncS
+from cocos.actions import CallFunc, CallFuncS, Show, Hide, Delay
 from cocos.director import director
 
 from cocos.scenes import *
@@ -12,7 +12,7 @@ from pyglet.window import key
 from pyglet.gl import *
 import pyglet
 
-import grid, entity, main, gui, game_over, commands
+import grid, entity, main, gui, game_over, commands, laser
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
@@ -64,6 +64,8 @@ class Battle(cocos.layer.Layer):
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
 
+        self.add(laser.LaserBeam(), z=1, name='laser')
+
     def load_battlemap(self):
         with open("battlemap.json") as f:
             data = json.load(f)
@@ -78,6 +80,7 @@ class Battle(cocos.layer.Layer):
                         ship = self.ships_factory.create_ship(ship_data['type'],
                                                                 mods =mods)
                         ship.scale = float(grid.CELL_WIDTH) / ship.width
+                        ship.laser_beam = cocos.euclid.Vector2(0, grid.CELL_WIDTH/2.)/ship.scale
                         ship.push_handlers(self)
                         player.add_ship(ship)
             self.battle_grid = grid.GridLayer(data['battlemap'])
@@ -88,7 +91,7 @@ class Battle(cocos.layer.Layer):
     def on_enter(self):
         super(Battle, self).on_enter()
         self.schedule(self.process_commands)
-    
+
     def load_player(self):
         player = entity.Player.load()
         self.players.append(player)
@@ -152,7 +155,7 @@ class Battle(cocos.layer.Layer):
     def on_key_release(self, symbol, modifiers):
         # With Return, end of turn for human players
         return self.game_phase[-1].on_key_release(symbol, modifiers)
-        
+
 
     def select_ship(self):
         "Make the entity the selected ship."
@@ -208,7 +211,11 @@ class Battle(cocos.layer.Layer):
 #""") % (attacker.player.name, defender.player.name)
 
         attacker.attack(defender)
-        self.on_command_finished()
+        laser = self.get("laser")
+        laser.pos_from = attacker.position
+        laser.pos_to = defender.position
+        laser.free()
+        laser.do(Show() + Delay(5) + Hide() + CallFunc(self.on_command_finished))
 
     def on_weapon_change(self):
         self.deselect_targets()
@@ -262,7 +269,7 @@ class GamePhase(object):
 
     def on_mouse_motion(self, x, y):
         pass
-    
+
     def on_key_release(self, symbol, modifiers):
         pass
 
@@ -329,7 +336,7 @@ class Idle(StaticGamePhase):
             self.battle.ship_info.set_model(entity)
         else:
             self.battle.ship_info.remove_model()
-    
+
     def on_key_release(self, symbol, modifiers):
         if symbol == key.RETURN:
             self.on_end_of_round()
@@ -397,7 +404,7 @@ class ShipSelected(StaticGamePhase):
             self.on_end_of_round()
             return True
         return False
-    
+
     def on_end_of_round(self):
         # Is this needed?
         self.battle.change_game_phase(Idle(self.battle))
