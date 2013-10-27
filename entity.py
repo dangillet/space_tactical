@@ -315,14 +315,15 @@ class BoostWeaponDamage(Boost):
 
     def use(self):
         super(BoostWeaponDamage, self).use()
-        damage = self.parent.weapon.damage
+        self.weapon_boosted = self.parent.weapon
+        damage = self.weapon_boosted.damage
         damage.min += 5
         damage.max += 5
         self.parent.dispatch_event("on_change")
 
     def reverse(self):
         super(BoostWeaponDamage, self).reverse()
-        damage = self.parent.weapon.damage
+        damage = self.weapon_boosted.damage
         damage.min -= 5
         damage.max -= 5
 
