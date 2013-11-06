@@ -501,9 +501,7 @@ Weapon:
         self.dispatch_event("on_damage", self, damage)
         if self.hull <= 0:
             self.dispatch_event("on_destroyed", self, EnergyType.name(energy_type))
-
-            return True
-        return False
+            self.player.destroy_ship(self)
 
 Ship.register_event_type("on_change")
 Ship.register_event_type("on_weapon_jammed")
