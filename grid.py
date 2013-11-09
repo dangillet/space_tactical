@@ -9,13 +9,13 @@ import cocos.euclid as eu
 from cocos.director import director
 from cocos.actions import (
     MoveTo, InstantAction, Repeat, RotateBy, RotateTo, Delay,
-    CallFunc, CallFuncS, ScaleTo, AccelDeccel)
+    CallFunc, CallFuncS, ScaleTo, AccelDeccel, Show, Hide)
 
 import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
-import entity, simplexnoise, library, battle
+import entity, simplexnoise, library, battle, laser
 
 CELL_WIDTH = 50
 
@@ -122,13 +122,6 @@ class GridLayer(cocos.layer.ScrollableLayer):
                     ('c4B', (255, 0, 0, 100) * (self.col+1)*2))
                     )
         self.grid_visible = True
-
-        # We prepare the explosion animation
-        raw = pyglet.resource.image('explosion.png')
-        raw_seq = pyglet.image.ImageGrid(raw, 1, 90)
-        texture_seq = pyglet.image.TextureGrid(raw_seq)
-
-        self.explosion_anim = pyglet.image.Animation.from_image_sequence(texture_seq, 0.02, False)
 
         # We store key state
         self.bindings = { #key constant : button name
@@ -261,6 +254,17 @@ class GridLayer(cocos.layer.ScrollableLayer):
         # Update the position in entities['ships']
         self.entities['ships'][(i, j)] = self.entities['ships'].pop( (i0, j0) )
 
+    def laser(self, pos_from, pos_to):
+        "Display a laser beam on the grid."
+        laser_beam = laser.LaserBeam()
+        self.add(laser_beam, z=1)
+        laser_beam.pos_from = pos_from
+        laser_beam.pos_to = pos_to
+        laser_beam.free()
+        laser_beam.do(Show() + Delay(1) + Hide() + 
+                      CallFunc(self.remove, laser_beam)
+                      )
+        
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"
         self.clear_cells(sprite.reachable_cells)

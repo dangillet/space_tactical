@@ -12,7 +12,7 @@ from pyglet.window import key
 from pyglet.gl import *
 import pyglet
 
-import grid, entity, main, gui, game_over, commands, laser
+import grid, entity, main, gui, game_over, commands
 
 INFO_WIDTH = 350
 SHIP_INFO_HEIGHT = 200
@@ -85,8 +85,6 @@ class Battle(cocos.layer.Layer):
         self.selected, self.targets = None, None
         # The reachable cells for a ship and the predecessor list to reconstruct the shortest path
         self.reachable_cells, self.predecessor = None, None
-
-        self.battle_grid.add(laser.LaserBeam(), z=1, name='laser')
 
     def load_battlemap(self):
         with open("battlemap.json") as f:
@@ -221,20 +219,9 @@ class Battle(cocos.layer.Layer):
 
     def attack_ship(self, attacker, defender):
         "Attacker attacks the defender"
-        ox, oy = self.battle_grid.from_pixel_to_grid(attacker.position)
-        m, n = self.battle_grid.from_pixel_to_grid(defender.position)
+        attacker.attack(defender)
         
-        rotate_action = self.battle_grid.rotate_to_bearing(m, n, ox, oy)
-        laser = self.battle_grid.get("laser")
-        direction = cocos.euclid.Vector2(x=m-ox, y=n-oy).normalize()
-        laser.pos_from = attacker.position + direction * grid.CELL_WIDTH/2.
-        laser.pos_to = defender.position
-        laser.free() # To update the vertex list
-        show_action = Show() + Delay(0.1) + Hide()
-        self.action_sequencer = ActionSequence([(attacker, rotate_action),
-                        (laser, show_action),
-                        (attacker, CallFunc(attacker.attack, defender))],
-                        callback=self.on_command_finished)
+        self.on_command_finished()
 
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
@@ -285,13 +272,7 @@ class Battle(cocos.layer.Layer):
     def on_destroyed(self, ship, energy_name):
         self.msg += _("""Yeahhh! And one more {energy_name}'s spoon for daddy!{{}}
 [{{color (200, 0, 0, 255)}}{ship} is destroyed.{{color (200, 200, 200, 255)}}]{{}}\n""").format(energy_name=energy_name, ship=ship.ship_type)
-        explosion = cocos.sprite.Sprite(self.battle_grid.explosion_anim,
-                            position=ship.position)
-        self.battle_grid.add(explosion, name="explosion")
-        @explosion.event
-        def on_animation_end():
-            self.battle_grid.remove("explosion")
-        self.battle_grid.remove(ship)
+        #
 
     def on_missed(self):
         if self.current_player.brain:

@@ -2,11 +2,13 @@ import random, json, fractions, abc, collections
 
 import cocos
 from cocos.text import *
+from cocos.actions import CallFunc
 
+import pyglet
 from pyglet import event
 from pyglet.gl import *
 
-import main, ia
+import main, ia, grid
 
 COOLDOWN = 100
 
@@ -347,6 +349,13 @@ class BoostShield(Boost):
             self.parent.shield[energy_type] -= 5
 
 class Ship(cocos.sprite.Sprite):
+    
+    # We prepare the explosion animation
+    raw = pyglet.resource.image('explosion.png')
+    raw_seq = pyglet.image.ImageGrid(raw, 1, 90)
+    texture_seq = pyglet.image.TextureGrid(raw_seq)
+    explosion_anim = pyglet.image.Animation.from_image_sequence(texture_seq, 0.02, False)
+    
     def __init__( self, image, ship_type, slots, speed, hull, shield):
         """
             Initialize the Ship
@@ -476,20 +485,36 @@ Weapon:
             self.boost_used = False
 
     def attack(self, defender):
-        "Process the attack actions. Returns if the defender was destroyed."
+        "Process the attack actions."
+        ox, oy = self.parent.from_pixel_to_grid(self.position)
+        m, n = self.parent.from_pixel_to_grid(defender.position)
+        
+        ship_actions = self.parent.rotate_to_bearing(m, n, ox, oy)
+        
         weapon = self.weapon
         weapon.fire()
         self.dispatch_event("on_change")
         if weapon.fumble():
             self.weapon_idx = None
             self.dispatch_event("on_weapon_jammed", weapon)
-        elif weapon.hit():
+        else:
+            direction = cocos.euclid.Vector2(x=m-ox, y=n-oy).normalize()
+            pos_from = self.position + direction * grid.CELL_WIDTH/2.
+            pos_to = defender.position
+            ship_actions = ship_actions + \
+                            CallFunc(self.parent.laser, pos_from, pos_to) + \
+                            CallFunc(self.hit, defender)
+            
+        self.do(ship_actions)
+
+    def hit(self, defender):
+        "Check if weapon hits. If that's the case, inflict damages."
+        weapon = self.weapon
+        if weapon.hit():
             dmg = weapon.damage.roll()
-            return defender.take_damage(dmg, weapon.energy_type)
+            defender.take_damage(dmg, weapon.energy_type)
         else:
             self.dispatch_event("on_missed")
-        return False
-
 
     def take_damage(self, damage, energy_type):
         "Apply damage and returns if the ship was destroyed."
@@ -502,6 +527,13 @@ Weapon:
         if self.hull <= 0:
             self.dispatch_event("on_destroyed", self, EnergyType.name(energy_type))
             self.player.destroy_ship(self)
+            explosion = cocos.sprite.Sprite(self.explosion_anim,
+                            position=self.position)
+            self.parent.add(explosion)
+            @explosion.event
+            def on_animation_end():
+                self.parent.remove(explosion)
+            self.parent.remove(self)
 
 Ship.register_event_type("on_change")
 Ship.register_event_type("on_weapon_jammed")

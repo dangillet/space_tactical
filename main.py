@@ -13,7 +13,7 @@ import pyglet
 
 SCREEN_W, SCREEN_H = 1120, 630 #16/9 aspect ratio. Small enough for my laptop to work comfortably
 
-import ship_mods
+
 
 def load_resource():
     pyglet.resource.path = ['res', 'res/images', 'res/fonts']
@@ -30,6 +30,7 @@ def main():
     # when the director applies some scaling.
     director.init(width = SCREEN_W, height=SCREEN_H, do_not_scale=True)
     load_resource()
+    import ship_mods
     ship_mod = ship_mods.ShipMod()
     main_scene = cocos.scene.Scene(ship_mod)
 
