@@ -261,9 +261,9 @@ class GridLayer(cocos.layer.ScrollableLayer):
         laser_beam.pos_from = pos_from
         laser_beam.pos_to = pos_to
         laser_beam.free()
-        laser_beam.do(Show() + Delay(1) + Hide() + 
-                      CallFunc(self.remove, laser_beam)
-                      )
+        actions = (Show() + Delay(0.2) + Hide() + 
+                      CallFunc(self.remove, laser_beam) )
+        laser_beam.do(actions)
         
     def delete_reachable_cells(self, sprite):
         "Delete the reachable cells"

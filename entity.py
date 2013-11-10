@@ -2,7 +2,7 @@ import random, json, fractions, abc, collections
 
 import cocos
 from cocos.text import *
-from cocos.actions import CallFunc
+from cocos.actions import CallFunc, Delay
 
 import pyglet
 from pyglet import event
@@ -484,7 +484,7 @@ Weapon:
             [boost.reverse() for boost in self.boosts if boost.used]
             self.boost_used = False
 
-    def attack(self, defender):
+    def attack(self, defender, callback):
         "Process the attack actions."
         ox, oy = self.parent.from_pixel_to_grid(self.position)
         m, n = self.parent.from_pixel_to_grid(defender.position)
@@ -503,8 +503,10 @@ Weapon:
             pos_to = defender.position
             ship_actions = ship_actions + \
                             CallFunc(self.parent.laser, pos_from, pos_to) + \
+                            Delay(0.1) + \
                             CallFunc(self.hit, defender)
-            
+                            
+        ship_actions = ship_actions + CallFunc(callback)
         self.do(ship_actions)
 
     def hit(self, defender):

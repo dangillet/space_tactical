@@ -219,9 +219,8 @@ class Battle(cocos.layer.Layer):
 
     def attack_ship(self, attacker, defender):
         "Attacker attacks the defender"
-        attacker.attack(defender)
+        attacker.attack(defender, self.on_command_finished)
         
-        self.on_command_finished()
 
         #self.msg += _("""{font_name 'Classic Robot'}{font_size 10}{color [255, 0, 0, 255]}
 #{bold True}ATTACK{bold False} {}
